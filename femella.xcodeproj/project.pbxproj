@@ -21,37 +21,50 @@
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FemellaAppRevamp;
+			remoteInfo = femella;
 		};
 		105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 105FC5722E9EAD3100EA8BCF /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 105FC5792E9EAD3100EA8BCF;
-			remoteInfo = FemellaAppRevamp;
+			remoteInfo = femella;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		105FC57A2E9EAD3100EA8BCF /* FemellaAppRevamp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FemellaAppRevamp.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5892E9EAD3200EA8BCF /* FemellaAppRevampTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FemellaAppRevampTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		105FC5932E9EAD3200EA8BCF /* FemellaAppRevampUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FemellaAppRevampUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC57A2E9EAD3100EA8BCF /* femella.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = femella.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5892E9EAD3200EA8BCF /* femellaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = femellaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		105FC5932E9EAD3200EA8BCF /* femellaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = femellaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		50E1613E2F4C869100CFDF4F /* Exceptions for "femella" folder in "femella" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 105FC5792E9EAD3100EA8BCF /* femella */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		105FC57C2E9EAD3100EA8BCF /* FemellaAppRevamp */ = {
+		105FC57C2E9EAD3100EA8BCF /* femella */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FemellaAppRevamp;
+			exceptions = (
+				50E1613E2F4C869100CFDF4F /* Exceptions for "femella" folder in "femella" target */,
+			);
+			path = femella;
 			sourceTree = "<group>";
 		};
-		105FC58C2E9EAD3200EA8BCF /* FemellaAppRevampTests */ = {
+		105FC58C2E9EAD3200EA8BCF /* femellaTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FemellaAppRevampTests;
+			path = femellaTests;
 			sourceTree = "<group>";
 		};
-		105FC5962E9EAD3200EA8BCF /* FemellaAppRevampUITests */ = {
+		105FC5962E9EAD3200EA8BCF /* femellaUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = FemellaAppRevampUITests;
+			path = femellaUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -90,9 +103,9 @@
 		105FC5712E9EAD3100EA8BCF = {
 			isa = PBXGroup;
 			children = (
-				105FC57C2E9EAD3100EA8BCF /* FemellaAppRevamp */,
-				105FC58C2E9EAD3200EA8BCF /* FemellaAppRevampTests */,
-				105FC5962E9EAD3200EA8BCF /* FemellaAppRevampUITests */,
+				105FC57C2E9EAD3100EA8BCF /* femella */,
+				105FC58C2E9EAD3200EA8BCF /* femellaTests */,
+				105FC5962E9EAD3200EA8BCF /* femellaUITests */,
 				50E160712F4BA97000CFDF4F /* Frameworks */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
@@ -101,9 +114,9 @@
 		105FC57B2E9EAD3100EA8BCF /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				105FC57A2E9EAD3100EA8BCF /* FemellaAppRevamp.app */,
-				105FC5892E9EAD3200EA8BCF /* FemellaAppRevampTests.xctest */,
-				105FC5932E9EAD3200EA8BCF /* FemellaAppRevampUITests.xctest */,
+				105FC57A2E9EAD3100EA8BCF /* femella.app */,
+				105FC5892E9EAD3200EA8BCF /* femellaTests.xctest */,
+				105FC5932E9EAD3200EA8BCF /* femellaUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -118,9 +131,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		105FC5792E9EAD3100EA8BCF /* FemellaAppRevamp */ = {
+		105FC5792E9EAD3100EA8BCF /* femella */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevamp" */;
+			buildConfigurationList = 105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femella" */;
 			buildPhases = (
 				105FC5762E9EAD3100EA8BCF /* Sources */,
 				105FC5772E9EAD3100EA8BCF /* Frameworks */,
@@ -131,9 +144,9 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				105FC57C2E9EAD3100EA8BCF /* FemellaAppRevamp */,
+				105FC57C2E9EAD3100EA8BCF /* femella */,
 			);
-			name = FemellaAppRevamp;
+			name = femella;
 			packageProductDependencies = (
 				50E160652F4BA5E600CFDF4F /* Auth */,
 				50E160672F4BA5E600CFDF4F /* Functions */,
@@ -142,13 +155,13 @@
 				50E1606D2F4BA5E600CFDF4F /* Storage */,
 				50E160722F4BA98700CFDF4F /* Supabase */,
 			);
-			productName = FemellaAppRevamp;
-			productReference = 105FC57A2E9EAD3100EA8BCF /* FemellaAppRevamp.app */;
+			productName = femella;
+			productReference = 105FC57A2E9EAD3100EA8BCF /* femella.app */;
 			productType = "com.apple.product-type.application";
 		};
-		105FC5882E9EAD3200EA8BCF /* FemellaAppRevampTests */ = {
+		105FC5882E9EAD3200EA8BCF /* femellaTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevampTests" */;
+			buildConfigurationList = 105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femellaTests" */;
 			buildPhases = (
 				105FC5852E9EAD3200EA8BCF /* Sources */,
 				105FC5862E9EAD3200EA8BCF /* Frameworks */,
@@ -160,18 +173,18 @@
 				105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC58C2E9EAD3200EA8BCF /* FemellaAppRevampTests */,
+				105FC58C2E9EAD3200EA8BCF /* femellaTests */,
 			);
-			name = FemellaAppRevampTests;
+			name = femellaTests;
 			packageProductDependencies = (
 			);
-			productName = FemellaAppRevampTests;
-			productReference = 105FC5892E9EAD3200EA8BCF /* FemellaAppRevampTests.xctest */;
+			productName = femellaTests;
+			productReference = 105FC5892E9EAD3200EA8BCF /* femellaTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		105FC5922E9EAD3200EA8BCF /* FemellaAppRevampUITests */ = {
+		105FC5922E9EAD3200EA8BCF /* femellaUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevampUITests" */;
+			buildConfigurationList = 105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femellaUITests" */;
 			buildPhases = (
 				105FC58F2E9EAD3200EA8BCF /* Sources */,
 				105FC5902E9EAD3200EA8BCF /* Frameworks */,
@@ -183,13 +196,13 @@
 				105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				105FC5962E9EAD3200EA8BCF /* FemellaAppRevampUITests */,
+				105FC5962E9EAD3200EA8BCF /* femellaUITests */,
 			);
-			name = FemellaAppRevampUITests;
+			name = femellaUITests;
 			packageProductDependencies = (
 			);
-			productName = FemellaAppRevampUITests;
-			productReference = 105FC5932E9EAD3200EA8BCF /* FemellaAppRevampUITests.xctest */;
+			productName = femellaUITests;
+			productReference = 105FC5932E9EAD3200EA8BCF /* femellaUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -215,7 +228,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FemellaAppRevamp" */;
+			buildConfigurationList = 105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "femella" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -232,9 +245,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				105FC5792E9EAD3100EA8BCF /* FemellaAppRevamp */,
-				105FC5882E9EAD3200EA8BCF /* FemellaAppRevampTests */,
-				105FC5922E9EAD3200EA8BCF /* FemellaAppRevampUITests */,
+				105FC5792E9EAD3100EA8BCF /* femella */,
+				105FC5882E9EAD3200EA8BCF /* femellaTests */,
+				105FC5922E9EAD3200EA8BCF /* femellaUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -290,12 +303,12 @@
 /* Begin PBXTargetDependency section */
 		105FC58B2E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FemellaAppRevamp */;
+			target = 105FC5792E9EAD3100EA8BCF /* femella */;
 			targetProxy = 105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 		105FC5952E9EAD3200EA8BCF /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 105FC5792E9EAD3100EA8BCF /* FemellaAppRevamp */;
+			target = 105FC5792E9EAD3100EA8BCF /* femella */;
 			targetProxy = 105FC5942E9EAD3200EA8BCF /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -429,13 +442,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FemellaAppRevamp/FemellaAppRevamp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = femella/femella.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M8YUQQ98SK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FemellaAppRevamp/Info.plist;
+				INFOPLIST_FILE = femella/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -465,13 +478,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = FemellaAppRevamp/FemellaAppRevamp.entitlements;
+				CODE_SIGN_ENTITLEMENTS = femella/femella.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = M8YUQQ98SK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = FemellaAppRevamp/Info.plist;
+				INFOPLIST_FILE = femella/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -514,7 +527,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FemellaAppRevamp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FemellaAppRevamp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/femella.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/femella";
 			};
 			name = Debug;
 		};
@@ -536,7 +549,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/FemellaAppRevamp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/FemellaAppRevamp";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/femella.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/femella";
 			};
 			name = Release;
 		};
@@ -556,7 +569,7 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = FemellaAppRevamp;
+				TEST_TARGET_NAME = femella;
 			};
 			name = Debug;
 		};
@@ -576,14 +589,14 @@
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = FemellaAppRevamp;
+				TEST_TARGET_NAME = femella;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "FemellaAppRevamp" */ = {
+		105FC5752E9EAD3100EA8BCF /* Build configuration list for PBXProject "femella" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59B2E9EAD3200EA8BCF /* Debug */,
@@ -592,7 +605,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevamp" */ = {
+		105FC59D2E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femella" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC59E2E9EAD3200EA8BCF /* Debug */,
@@ -601,7 +614,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevampTests" */ = {
+		105FC5A02E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femellaTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A12E9EAD3200EA8BCF /* Debug */,
@@ -610,7 +623,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "FemellaAppRevampUITests" */ = {
+		105FC5A32E9EAD3200EA8BCF /* Build configuration list for PBXNativeTarget "femellaUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				105FC5A42E9EAD3200EA8BCF /* Debug */,
