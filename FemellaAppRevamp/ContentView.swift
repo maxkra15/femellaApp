@@ -5,39 +5,46 @@ struct ContentView: View {
     @State private var eventsVM = EventsViewModel()
     @State private var notificationsVM = NotificationsViewModel()
     @State private var surveysVM = SurveysViewModel()
-    @State private var selectedTab: AppTab = .events
+    @State private var selectedTab = 0
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            Tab("Events", systemImage: "calendar", value: .events) {
-                EventsView(eventsVM: eventsVM)
-            }
+            EventsView(eventsVM: eventsVM)
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("Events")
+                }
+                .tag(0)
 
-            Tab("My Events", systemImage: "ticket", value: .myEvents) {
-                MyEventsView(eventsVM: eventsVM)
-            }
+            MyEventsView(eventsVM: eventsVM)
+                .tabItem {
+                    Image(systemName: "heart.circle")
+                    Text("My Events")
+                }
+                .tag(1)
 
-            Tab("Notifications", systemImage: "bell", value: .notifications) {
-                NotificationsView(notificationsVM: notificationsVM)
-            }
-            .badge(notificationsVM.unreadCount)
+            NotificationsView(notificationsVM: notificationsVM)
+                .tabItem {
+                    Image(systemName: "bell")
+                    Text("Notifications")
+                }
+                .badge(notificationsVM.unreadCount)
+                .tag(2)
 
-            Tab("Surveys", systemImage: "doc.text", value: .surveys) {
-                SurveysView(surveysVM: surveysVM)
-            }
+            SurveysView(surveysVM: surveysVM)
+                .tabItem {
+                    Image(systemName: "doc.text")
+                    Text("Surveys")
+                }
+                .tag(3)
 
-            Tab("Profile", systemImage: "person", value: .profile) {
-                ProfileView()
-            }
+            ProfileView()
+                .tabItem {
+                    Image(systemName: "person.circle")
+                    Text("Profile")
+                }
+                .tag(4)
         }
-        .tint(FemColor.accentPink)
+        .tint(FemColor.pink)
     }
-}
-
-nonisolated enum AppTab: Hashable, Sendable {
-    case events
-    case myEvents
-    case notifications
-    case surveys
-    case profile
 }

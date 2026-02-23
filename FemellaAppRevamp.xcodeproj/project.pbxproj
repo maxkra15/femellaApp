@@ -6,6 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		50E160662F4BA5E600CFDF4F /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 50E160652F4BA5E600CFDF4F /* Auth */; };
+		50E160682F4BA5E600CFDF4F /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 50E160672F4BA5E600CFDF4F /* Functions */; };
+		50E1606A2F4BA5E600CFDF4F /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 50E160692F4BA5E600CFDF4F /* PostgREST */; };
+		50E1606C2F4BA5E600CFDF4F /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 50E1606B2F4BA5E600CFDF4F /* Realtime */; };
+		50E1606E2F4BA5E600CFDF4F /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 50E1606D2F4BA5E600CFDF4F /* Storage */; };
+		50E160732F4BA98700CFDF4F /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 50E160722F4BA98700CFDF4F /* Supabase */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		105FC58A2E9EAD3200EA8BCF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -29,9 +38,22 @@
 		105FC5932E9EAD3200EA8BCF /* FemellaAppRevampUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FemellaAppRevampUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		50E1613E2F4C869100CFDF4F /* Exceptions for "FemellaAppRevamp" folder in "FemellaAppRevamp" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 105FC5792E9EAD3100EA8BCF /* FemellaAppRevamp */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		105FC57C2E9EAD3100EA8BCF /* FemellaAppRevamp */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				50E1613E2F4C869100CFDF4F /* Exceptions for "FemellaAppRevamp" folder in "FemellaAppRevamp" target */,
+			);
 			path = FemellaAppRevamp;
 			sourceTree = "<group>";
 		};
@@ -52,6 +74,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				50E1606A2F4BA5E600CFDF4F /* PostgREST in Frameworks */,
+				50E160682F4BA5E600CFDF4F /* Functions in Frameworks */,
+				50E160732F4BA98700CFDF4F /* Supabase in Frameworks */,
+				50E160662F4BA5E600CFDF4F /* Auth in Frameworks */,
+				50E1606E2F4BA5E600CFDF4F /* Storage in Frameworks */,
+				50E1606C2F4BA5E600CFDF4F /* Realtime in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +106,7 @@
 				105FC57C2E9EAD3100EA8BCF /* FemellaAppRevamp */,
 				105FC58C2E9EAD3200EA8BCF /* FemellaAppRevampTests */,
 				105FC5962E9EAD3200EA8BCF /* FemellaAppRevampUITests */,
+				50E160712F4BA97000CFDF4F /* Frameworks */,
 				105FC57B2E9EAD3100EA8BCF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -90,6 +119,13 @@
 				105FC5932E9EAD3200EA8BCF /* FemellaAppRevampUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		50E160712F4BA97000CFDF4F /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -112,6 +148,12 @@
 			);
 			name = FemellaAppRevamp;
 			packageProductDependencies = (
+				50E160652F4BA5E600CFDF4F /* Auth */,
+				50E160672F4BA5E600CFDF4F /* Functions */,
+				50E160692F4BA5E600CFDF4F /* PostgREST */,
+				50E1606B2F4BA5E600CFDF4F /* Realtime */,
+				50E1606D2F4BA5E600CFDF4F /* Storage */,
+				50E160722F4BA98700CFDF4F /* Supabase */,
 			);
 			productName = FemellaAppRevamp;
 			productReference = 105FC57A2E9EAD3100EA8BCF /* FemellaAppRevamp.app */;
@@ -195,6 +237,9 @@
 			);
 			mainGroup = 105FC5712E9EAD3100EA8BCF;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 105FC57B2E9EAD3100EA8BCF /* Products */;
 			projectDirPath = "";
@@ -322,7 +367,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -380,7 +425,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -395,12 +440,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FemellaAppRevamp/FemellaAppRevamp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M8YUQQ98SK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FemellaAppRevamp/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,7 +459,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.femella-app-revamp-pb6fnsk;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eigen.femella;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -428,12 +476,15 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = FemellaAppRevamp/FemellaAppRevamp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = M8YUQQ98SK;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FemellaAppRevamp/Info.plist;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.lifestyle";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -444,7 +495,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.rork.femella-app-revamp-pb6fnsk;
+				PRODUCT_BUNDLE_IDENTIFIER = com.eigen.femella;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -580,6 +631,50 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		50E160652F4BA5E600CFDF4F /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		50E160672F4BA5E600CFDF4F /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		50E160692F4BA5E600CFDF4F /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		50E1606B2F4BA5E600CFDF4F /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		50E1606D2F4BA5E600CFDF4F /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		50E160722F4BA98700CFDF4F /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 50E160642F4BA5E600CFDF4F /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 105FC5722E9EAD3100EA8BCF /* Project object */;
 }

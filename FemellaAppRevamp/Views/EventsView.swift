@@ -13,6 +13,7 @@ struct EventsView: View {
 
                     if eventsVM.isLoading {
                         ProgressView()
+                            .tint(FemColor.pink)
                             .frame(maxWidth: .infinity, minHeight: 200)
                     } else if eventsVM.upcomingEvents.isEmpty {
                         ContentUnavailableView("No Events", systemImage: "calendar.badge.exclamationmark", description: Text("No upcoming events match your filters."))
@@ -24,7 +25,7 @@ struct EventsView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Events")
             .searchable(text: $searchText, prompt: "Search events...")
             .onChange(of: searchText) { _, newValue in
@@ -87,7 +88,7 @@ struct EventsView: View {
                 Text(appVM.selectedHub?.name ?? "Hub")
                     .font(.subheadline.weight(.medium))
             }
-            .foregroundStyle(FemColor.navy)
+            .foregroundStyle(FemColor.darkBlue)
         }
     }
 }
@@ -100,8 +101,8 @@ private struct EventSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: FemSpacing.md) {
             Text(title)
-                .font(.title3.bold())
-                .foregroundStyle(FemColor.navy)
+                .font(FemFont.title(20))
+                .foregroundStyle(FemColor.darkBlue)
 
             ForEach(events) { event in
                 NavigationLink(value: event) {
@@ -122,7 +123,7 @@ struct EventCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Color(.secondarySystemBackground)
+            Color(FemColor.ivory)
                 .frame(height: 160)
                 .overlay {
                     AsyncImage(url: event.heroImageURL) { phase in
@@ -136,7 +137,7 @@ struct EventCard: View {
                 .overlay(alignment: .topLeading) {
                     HStack(spacing: 6) {
                         Text(event.category.rawValue)
-                            .font(.caption.weight(.semibold))
+                            .font(.caption.weight(.bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
@@ -145,11 +146,11 @@ struct EventCard: View {
 
                         if !event.isFree {
                             Text(event.priceDisplay)
-                                .font(.caption.weight(.semibold))
+                                .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 4)
-                                .background(.black.opacity(0.5))
+                                .background(.ultraThinMaterial)
                                 .clipShape(Capsule())
                         }
                     }
@@ -159,7 +160,7 @@ struct EventCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(event.title)
                     .font(.headline)
-                    .foregroundStyle(FemColor.navy)
+                    .foregroundStyle(FemColor.darkBlue)
                     .lineLimit(2)
 
                 HStack(spacing: FemSpacing.md) {
@@ -167,12 +168,12 @@ struct EventCard: View {
                     Label(event.startsAt.formatted(.dateTime.hour().minute()), systemImage: "clock")
                 }
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(FemColor.darkBlue.opacity(0.5))
 
                 HStack {
                     Label(event.locationName, systemImage: "mappin")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         .lineLimit(1)
 
                     Spacer()
@@ -180,7 +181,7 @@ struct EventCard: View {
                     if let reg = registration {
                         StatusBadge(
                             text: reg.status == .waitlisted ? "Waitlisted" : "Registered",
-                            color: reg.status == .waitlisted ? .orange : FemColor.success
+                            color: reg.status == .waitlisted ? FemColor.orangeRed : FemColor.green
                         )
                     } else {
                         HStack(spacing: 4) {
@@ -188,7 +189,7 @@ struct EventCard: View {
                             Text("\(event.registeredCount)/\(event.capacity)")
                         }
                         .font(.caption)
-                        .foregroundStyle(event.isFull ? FemColor.danger : .secondary)
+                        .foregroundStyle(event.isFull ? FemColor.orangeRed : FemColor.darkBlue.opacity(0.4))
                     }
                 }
             }
@@ -199,9 +200,9 @@ struct EventCard: View {
 
     private func categoryColor(_ cat: EventCategory) -> Color {
         switch cat {
-        case .connect: FemColor.accentPink
-        case .learn: FemColor.ctaBlue
-        case .grow: FemColor.success
+        case .connect: FemColor.pink
+        case .learn: FemColor.lightBlue
+        case .grow: FemColor.green
         }
     }
 }

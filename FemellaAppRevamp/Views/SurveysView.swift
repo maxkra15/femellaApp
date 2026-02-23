@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SurveysView: View {
+    @Environment(AppViewModel.self) private var appVM
     @Bindable var surveysVM: SurveysViewModel
     @State private var selectedSurvey: Survey?
 
@@ -10,13 +11,14 @@ struct SurveysView: View {
                 VStack(spacing: FemSpacing.xl) {
                     if surveysVM.isLoading {
                         ProgressView()
+                            .tint(FemColor.pink)
                             .frame(maxWidth: .infinity, minHeight: 200)
                     } else {
                         if !surveysVM.openSurveys.isEmpty {
                             VStack(alignment: .leading, spacing: FemSpacing.md) {
                                 Text("Open Surveys")
-                                    .font(.title3.bold())
-                                    .foregroundStyle(FemColor.navy)
+                                    .font(FemFont.title(20))
+                                    .foregroundStyle(FemColor.darkBlue)
 
                                 ForEach(surveysVM.openSurveys) { survey in
                                     SurveyCard(survey: survey, isOpen: true) {
@@ -29,8 +31,8 @@ struct SurveysView: View {
                         if !surveysVM.completedSurveys.isEmpty {
                             VStack(alignment: .leading, spacing: FemSpacing.md) {
                                 Text("Completed")
-                                    .font(.title3.bold())
-                                    .foregroundStyle(FemColor.navy)
+                                    .font(FemFont.title(20))
+                                    .foregroundStyle(FemColor.darkBlue)
 
                                 ForEach(surveysVM.completedSurveys) { survey in
                                     SurveyCard(survey: survey, isOpen: false) {}
@@ -47,9 +49,9 @@ struct SurveysView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Surveys")
-            .task { await surveysVM.loadSurveys() }
+            .task { await surveysVM.loadSurveys(hubId: appVM.selectedHubId) }
             .sheet(item: $selectedSurvey) { survey in
                 SurveyDetailView(survey: survey, surveysVM: surveysVM)
             }
@@ -68,10 +70,10 @@ private struct SurveyCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(survey.title)
                         .font(.headline)
-                        .foregroundStyle(FemColor.navy)
+                        .foregroundStyle(FemColor.darkBlue)
                     Text(survey.description)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         .lineLimit(2)
                 }
 
@@ -83,7 +85,7 @@ private struct SurveyCard: View {
                             .femSecondaryButton()
                     }
                 } else {
-                    StatusBadge(text: "Done", color: FemColor.success)
+                    StatusBadge(text: "Done", color: FemColor.green)
                 }
             }
 
@@ -93,7 +95,7 @@ private struct SurveyCard: View {
                     Text(isOpen ? "Closes \(closes.formatted(.dateTime.month(.abbreviated).day()))" : "Closed \(closes.formatted(.dateTime.month(.abbreviated).day()))")
                 }
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(FemColor.darkBlue.opacity(0.3))
             }
         }
         .padding(FemSpacing.lg)
@@ -114,11 +116,11 @@ struct SurveyDetailView: View {
                 VStack(alignment: .leading, spacing: FemSpacing.xl) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text(survey.title)
-                            .font(.title3.bold())
-                            .foregroundStyle(FemColor.navy)
+                            .font(FemFont.display(22))
+                            .foregroundStyle(FemColor.darkBlue)
                         Text(survey.description)
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                     }
 
                     ForEach(survey.questions.sorted(by: { $0.orderIndex < $1.orderIndex })) { question in
@@ -144,12 +146,13 @@ struct SurveyDetailView: View {
                 }
                 .padding(FemSpacing.lg)
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Survey")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                 }
             }
         }
@@ -171,7 +174,7 @@ private struct QuestionView: View {
         VStack(alignment: .leading, spacing: FemSpacing.md) {
             Text(question.prompt)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(FemColor.navy)
+                .foregroundStyle(FemColor.darkBlue)
 
             switch question.type {
             case .likert:
@@ -183,9 +186,12 @@ private struct QuestionView: View {
                             Text(option)
                                 .font(.subheadline.weight(.medium))
                                 .frame(width: 44, height: 44)
-                                .background(answer == option ? FemColor.accentPink : Color(.secondarySystemBackground))
-                                .foregroundStyle(answer == option ? .white : .primary)
+                                .background(answer == option ? FemColor.pink : FemColor.ivory)
+                                .foregroundStyle(answer == option ? .white : FemColor.darkBlue)
                                 .clipShape(Circle())
+                                .overlay(
+                                    Circle().strokeBorder(answer == option ? Color.clear : FemColor.darkBlue.opacity(0.1), lineWidth: 1)
+                                )
                         }
                     }
                 }
@@ -197,16 +203,28 @@ private struct QuestionView: View {
                             answer = option
                         } label: {
                             HStack {
-                                Image(systemName: answer == option ? "checkmark.circle.fill" : "circle")
-                                    .foregroundStyle(answer == option ? FemColor.accentPink : .secondary)
+                                Circle()
+                                    .strokeBorder(answer == option ? FemColor.pink : FemColor.darkBlue.opacity(0.15), lineWidth: 2)
+                                    .frame(width: 20, height: 20)
+                                    .overlay {
+                                        if answer == option {
+                                            Circle()
+                                                .fill(FemColor.pink)
+                                                .frame(width: 10, height: 10)
+                                        }
+                                    }
                                 Text(option)
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(FemColor.darkBlue)
                                 Spacer()
                             }
                             .font(.subheadline)
                             .padding(12)
-                            .background(answer == option ? FemColor.accentPink.opacity(0.06) : Color(.secondarySystemBackground))
-                            .clipShape(.rect(cornerRadius: 10))
+                            .background(answer == option ? FemColor.pink.opacity(0.06) : FemColor.ivory)
+                            .clipShape(.rect(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(answer == option ? FemColor.pink.opacity(0.3) : Color.clear, lineWidth: 1)
+                            )
                         }
                     }
                 }
@@ -215,12 +233,17 @@ private struct QuestionView: View {
                 TextField("Your answer...", text: $answer, axis: .vertical)
                     .lineLimit(3...6)
                     .padding(12)
-                    .background(Color(.secondarySystemBackground))
-                    .clipShape(.rect(cornerRadius: 12))
+                    .background(FemColor.ivory)
+                    .clipShape(.rect(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(FemColor.darkBlue.opacity(0.06), lineWidth: 1)
+                    )
             }
         }
         .padding(FemSpacing.lg)
         .background(FemColor.cardBackground)
-        .clipShape(.rect(cornerRadius: 16))
+        .clipShape(.rect(cornerRadius: 20))
+        .shadow(color: FemColor.darkBlue.opacity(0.04), radius: 8, y: 4)
     }
 }

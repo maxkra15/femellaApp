@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "FemellaLongPosBlue.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

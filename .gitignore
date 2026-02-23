@@ -36,4 +36,4 @@ rork-eslint.config.js
 .env
 core
 node_modules
-.expo
+.expoAuthKey_*.p8

@@ -1,11 +1,13 @@
 import SwiftUI
 import MapKit
+import CoreLocation
 
 struct EventDetailView: View {
     let event: Event
     let eventsVM: EventsViewModel
     @State private var isProcessing: Bool = false
     @State private var showDeregisterAlert: Bool = false
+    @State private var mapRegion: MKCoordinateRegion?
 
     private var registration: EventRegistration? {
         eventsVM.registrationFor(eventId: event.id)
@@ -24,14 +26,16 @@ struct EventDetailView: View {
                     headerSection
                     detailsSection
                     descriptionSection
-                    attendeesSection
+                    if event.registeredCount > 0 {
+                        attendeesSection
+                    }
                     mapSection
                     ctaButton
                 }
                 .padding(FemSpacing.lg)
             }
         }
-        .background(FemColor.blush.ignoresSafeArea())
+        .background(FemColor.ivory.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .alert("Deregister from Event", isPresented: $showDeregisterAlert) {
             Button("Cancel", role: .cancel) {}
@@ -41,10 +45,15 @@ struct EventDetailView: View {
         } message: {
             Text("Are you sure you want to deregister from \"\(event.title)\"?")
         }
+        .task {
+            await geocodeAddress()
+        }
     }
 
+    // MARK: - Hero Image
+
     private var heroImage: some View {
-        Color(.secondarySystemBackground)
+        Color(FemColor.ivory)
             .frame(height: 260)
             .overlay {
                 AsyncImage(url: event.heroImageURL) { phase in
@@ -62,14 +71,14 @@ struct EventDetailView: View {
                 )
             }
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text(event.category.rawValue)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(categoryColor.opacity(0.8))
+                            .background(categoryColor.opacity(0.9))
                             .clipShape(Capsule())
 
                         if !event.isFree {
@@ -84,93 +93,162 @@ struct EventDetailView: View {
                     }
 
                     Text(event.title)
-                        .font(.title2.bold())
+                        .font(FemFont.display(24))
                         .foregroundStyle(.white)
                 }
                 .padding(FemSpacing.lg)
             }
     }
 
+    // MARK: - Header
+
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Label("Hosted by \(event.hostName)", systemImage: "person.circle")
+        HStack {
+            if !event.hostName.isEmpty {
+                Label("Hosted by \(event.hostName)", systemImage: "person.circle.fill")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if isRegistered {
-                    StatusBadge(
-                        text: registration?.status == .waitlisted ? "Waitlisted" : "Registered",
-                        color: registration?.status == .waitlisted ? .orange : FemColor.success
-                    )
-                }
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.6))
+            }
+            Spacer()
+            if isRegistered {
+                StatusBadge(
+                    text: registration?.status == .waitlisted ? "Waitlisted" : "Registered",
+                    color: registration?.status == .waitlisted ? FemColor.orangeRed : FemColor.green
+                )
             }
         }
     }
 
+    // MARK: - Details
+
     private var detailsSection: some View {
-        VStack(spacing: FemSpacing.md) {
-            DetailRow(icon: "calendar", title: "Date", value: event.startsAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
-            DetailRow(icon: "clock", title: "Time", value: "\(event.startsAt.formatted(.dateTime.hour().minute())) – \(event.endsAt.formatted(.dateTime.hour().minute()))")
-            DetailRow(icon: "mappin.circle", title: "Location", value: "\(event.locationName)\n\(event.address)")
-            DetailRow(icon: "person.2", title: "Capacity", value: "\(event.registeredCount)/\(event.capacity) registered" + (event.waitlistCount > 0 ? " · \(event.waitlistCount) waitlisted" : ""))
+        VStack(spacing: 0) {
+            detailRow(
+                icon: "calendar",
+                color: FemColor.pink,
+                title: event.startsAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
+            )
+
+            Divider().padding(.leading, 52)
+
+            detailRow(
+                icon: "clock",
+                color: FemColor.lightBlue,
+                title: "\(event.startsAt.formatted(.dateTime.hour().minute())) – \(event.endsAt.formatted(.dateTime.hour().minute()))"
+            )
+
+            Divider().padding(.leading, 52)
+
+            detailRow(
+                icon: "mappin.circle.fill",
+                color: FemColor.orangeRed,
+                title: event.locationName,
+                subtitle: event.address
+            )
+
+            Divider().padding(.leading, 52)
+
+            detailRow(
+                icon: "person.2.fill",
+                color: FemColor.green,
+                title: "\(event.registeredCount)/\(event.capacity) registered",
+                subtitle: event.waitlistCount > 0 ? "\(event.waitlistCount) on waitlist" : nil
+            )
 
             if event.isNonDeregisterable {
-                HStack(spacing: 8) {
-                    Image(systemName: "lock.fill")
-                        .foregroundStyle(FemColor.danger)
+                Divider().padding(.leading, 52)
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(FemColor.orangeRed.opacity(0.1))
+                        .frame(width: 36, height: 36)
+                        .overlay {
+                            Image(systemName: "lock.fill")
+                                .font(.subheadline)
+                                .foregroundStyle(FemColor.orangeRed)
+                        }
+
                     Text("Non-deregisterable event")
-                        .font(.caption)
-                        .foregroundStyle(FemColor.danger)
+                        .font(.subheadline)
+                        .foregroundStyle(FemColor.orangeRed)
                 }
-                .padding(10)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(FemColor.danger.opacity(0.08))
-                .clipShape(.rect(cornerRadius: 10))
+                .padding(.vertical, FemSpacing.sm)
             }
         }
         .padding(FemSpacing.lg)
         .background(FemColor.cardBackground)
-        .clipShape(.rect(cornerRadius: 16))
+        .clipShape(.rect(cornerRadius: 20))
+        .shadow(color: FemColor.darkBlue.opacity(0.04), radius: 8, y: 4)
     }
+
+    private func detailRow(icon: String, color: Color, title: String, subtitle: String? = nil) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(color.opacity(0.1))
+                .frame(width: 36, height: 36)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.subheadline)
+                        .foregroundStyle(color)
+                }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(FemColor.darkBlue)
+
+                if let subtitle, !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
+                }
+            }
+
+            Spacer()
+        }
+        .padding(.vertical, FemSpacing.sm)
+    }
+
+    // MARK: - Description
 
     private var descriptionSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("About")
-                .font(.headline)
-                .foregroundStyle(FemColor.navy)
+                .font(FemFont.title(18))
+                .foregroundStyle(FemColor.darkBlue)
             Text(event.description)
                 .font(.body)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(FemColor.darkBlue.opacity(0.7))
         }
     }
+
+    // MARK: - Attendees
 
     private var attendeesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Attendees")
-                .font(.headline)
-                .foregroundStyle(FemColor.navy)
+                .font(FemFont.title(18))
+                .foregroundStyle(FemColor.darkBlue)
 
             HStack(spacing: -8) {
                 ForEach(0..<min(5, event.registeredCount), id: \.self) { i in
                     Circle()
-                        .fill(FemColor.accentPink.opacity(Double(5 - i) * 0.15 + 0.2))
+                        .fill(FemColor.pink.opacity(Double(5 - i) * 0.15 + 0.2))
                         .frame(width: 36, height: 36)
                         .overlay {
                             Text(String(Character(UnicodeScalar(65 + i % 26)!)))
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(FemColor.accentPinkDark)
+                                .foregroundStyle(FemColor.darkBlue)
                         }
                         .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
                 }
                 if event.registeredCount > 5 {
                     Circle()
-                        .fill(Color(.secondarySystemBackground))
+                        .fill(FemColor.ivory)
                         .frame(width: 36, height: 36)
                         .overlay {
                             Text("+\(event.registeredCount - 5)")
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         }
                         .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
                 }
@@ -178,28 +256,60 @@ struct EventDetailView: View {
         }
     }
 
+    // MARK: - Map (geocoded from address)
+
     private var mapSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Location")
-                .font(.headline)
-                .foregroundStyle(FemColor.navy)
+                .font(FemFont.title(18))
+                .foregroundStyle(FemColor.darkBlue)
 
-            Map(initialPosition: .region(MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: event.latitude, longitude: event.longitude),
-                span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
-            ))) {
-                Marker(event.locationName, coordinate: CLLocationCoordinate2D(latitude: event.latitude, longitude: event.longitude))
-                    .tint(FemColor.accentPink)
+            if let region = mapRegion {
+                Map(initialPosition: .region(region)) {
+                    Marker(event.locationName, coordinate: region.center)
+                        .tint(FemColor.pink)
+                }
+                .frame(height: 180)
+                .clipShape(.rect(cornerRadius: 20))
+                .allowsHitTesting(false)
+            } else {
+                // Loading or geocoding fallback
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(FemColor.cardBackground)
+                    .frame(height: 180)
+                    .overlay {
+                        VStack(spacing: 8) {
+                            Image(systemName: "map")
+                                .font(.title)
+                                .foregroundStyle(FemColor.darkBlue.opacity(0.2))
+                            Text("Loading map...")
+                                .font(.caption)
+                                .foregroundStyle(FemColor.darkBlue.opacity(0.3))
+                        }
+                    }
             }
-            .frame(height: 180)
-            .clipShape(.rect(cornerRadius: 16))
-            .allowsHitTesting(false)
 
-            Text(event.address)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            // Tappable address that opens Apple Maps
+            Button {
+                openInMaps()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                        .foregroundStyle(FemColor.pink)
+                    Text(event.address)
+                        .font(.caption)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.6))
+                        .multilineTextAlignment(.leading)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.3))
+                }
+            }
         }
     }
+
+    // MARK: - CTA
 
     @ViewBuilder
     private var ctaButton: some View {
@@ -215,20 +325,23 @@ struct EventDetailView: View {
                     Text("Deregister")
                 }
                 .font(.headline)
-                .foregroundStyle(FemColor.danger)
+                .foregroundStyle(FemColor.orangeRed)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(FemColor.danger.opacity(0.1))
-                .clipShape(.rect(cornerRadius: 14))
+                .background(FemColor.orangeRed.opacity(0.1))
+                .clipShape(Capsule())
             }
         } else if isRegistered {
-            Text("You're registered!")
-                .font(.headline)
-                .foregroundStyle(FemColor.success)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(FemColor.success.opacity(0.1))
-                .clipShape(.rect(cornerRadius: 14))
+            HStack {
+                Image(systemName: "checkmark.circle.fill")
+                Text("You're registered!")
+            }
+            .font(.headline)
+            .foregroundStyle(FemColor.green)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(FemColor.green.opacity(0.1))
+            .clipShape(Capsule())
         } else {
             Button {
                 Task { await registerForEvent() }
@@ -256,17 +369,58 @@ struct EventDetailView: View {
                 .femPrimaryButton(isEnabled: !isProcessing)
             }
             .disabled(isProcessing)
-            .sensoryFeedback(.impact(weight: .medium), trigger: isProcessing)
         }
 
         Spacer().frame(height: FemSpacing.lg)
     }
 
+    // MARK: - Helpers
+
     private var categoryColor: Color {
         switch event.category {
-        case .connect: FemColor.accentPink
-        case .learn: FemColor.ctaBlue
-        case .grow: FemColor.success
+        case .connect: FemColor.pink
+        case .learn: FemColor.lightBlue
+        case .grow: FemColor.green
+        }
+    }
+
+    private func geocodeAddress() async {
+        let addressString = [event.locationName, event.address]
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+
+        guard !addressString.isEmpty else { return }
+
+        // If we already have valid coordinates from the database, use those
+        if event.latitude != 0 || event.longitude != 0 {
+            mapRegion = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: event.latitude, longitude: event.longitude),
+                span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+            )
+            return
+        }
+
+        // Otherwise, geocode the address string
+        let geocoder = CLGeocoder()
+        do {
+            let placemarks = try await geocoder.geocodeAddressString(addressString)
+            if let location = placemarks.first?.location {
+                await MainActor.run {
+                    mapRegion = MKCoordinateRegion(
+                        center: location.coordinate,
+                        span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
+                    )
+                }
+            }
+        } catch {
+            print("Geocoding failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func openInMaps() {
+        let address = event.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        if let url = URL(string: "maps://?q=\(address)") {
+            UIApplication.shared.open(url)
         }
     }
 
@@ -280,29 +434,5 @@ struct EventDetailView: View {
         isProcessing = true
         await eventsVM.deregisterFromEvent(event)
         isProcessing = false
-    }
-}
-
-private struct DetailRow: View {
-    let icon: String
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.body)
-                .foregroundStyle(FemColor.accentPink)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-            }
-        }
     }
 }

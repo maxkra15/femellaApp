@@ -11,11 +11,14 @@ nonisolated enum AuthState: Sendable, Equatable {
 @Observable
 @MainActor
 class AppViewModel {
-    var authState: AuthState = .unauthenticated
+    var authState: AuthState = .loading
     var currentUser: UserProfile?
     var membership: Membership?
-    var selectedHubId: String = "hub-zurich"
-    var hubs: [Hub] = MockDataService.hubs
+    var selectedHubId: String = ""
+    var hubs: [Hub] = []
+    var errorMessage: String?
+
+    private let service = SupabaseService.shared
 
     var selectedHub: Hub? {
         hubs.first { $0.id == selectedHubId }
@@ -25,82 +28,191 @@ class AppViewModel {
         membership?.isActive ?? false
     }
 
+    // MARK: - Session Restore
+
+    func restoreSession() async {
+        authState = .loading
+        do {
+            hubs = try await service.fetchHubs()
+        } catch {
+            print("Failed to fetch hubs: \(error)")
+        }
+
+        guard let authUser = await service.restoreSession() else {
+            authState = .unauthenticated
+            return
+        }
+
+        await loadUserData(userId: authUser.id)
+    }
+
+    // MARK: - Auth
+
     func signIn(email: String, password: String) async {
         authState = .loading
-        try? await Task.sleep(for: .seconds(1))
-        currentUser = MockDataService.sampleUser
-        membership = MockDataService.sampleMembership
-        authState = .authenticated
+        errorMessage = nil
+        do {
+            let authUser = try await service.signIn(email: email, password: password)
+            if hubs.isEmpty {
+                hubs = try await service.fetchHubs()
+            }
+            await loadUserData(userId: authUser.id)
+        } catch {
+            errorMessage = error.localizedDescription
+            authState = .unauthenticated
+        }
     }
 
     func signUp(email: String, password: String) async {
         authState = .loading
-        try? await Task.sleep(for: .seconds(1))
-        currentUser = UserProfile(
-            id: UUID().uuidString,
-            firstName: "",
-            lastName: "",
-            email: email,
-            phone: "",
-            university: "",
-            degree: "",
-            company: "",
-            jobTitle: "",
-            homeHubId: "",
-            avatarURL: nil,
-            showProfileToMembers: true
-        )
-        authState = .profileIncomplete
+        errorMessage = nil
+        do {
+            let authUser = try await service.signUp(email: email, password: password)
+            if hubs.isEmpty {
+                hubs = try await service.fetchHubs()
+            }
+            currentUser = UserProfile(
+                id: authUser.id,
+                firstName: "",
+                lastName: "",
+                email: authUser.email,
+                phone: "",
+                university: "",
+                degree: "",
+                company: "",
+                jobTitle: "",
+                homeHubId: "",
+                avatarURL: nil,
+                showProfileToMembers: true
+            )
+            authState = .profileIncomplete
+        } catch {
+            errorMessage = error.localizedDescription
+            authState = .unauthenticated
+        }
     }
 
     func completeProfile(_ profile: UserProfile) async {
         authState = .loading
-        try? await Task.sleep(for: .seconds(0.5))
-        currentUser = profile
-        selectedHubId = profile.homeHubId
-        authState = .paywalled
+        do {
+            try await service.upsertProfile(profile)
+            currentUser = profile
+            if !profile.homeHubId.isEmpty {
+                selectedHubId = profile.homeHubId
+            }
+            // Check if they have an active membership
+            let mem = try await service.fetchMembership(userId: profile.id)
+            if let mem, mem.isActive {
+                membership = mem
+                authState = .authenticated
+            } else {
+                authState = .paywalled
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+            authState = .profileIncomplete
+        }
     }
 
     func activateMembership() async {
-        try? await Task.sleep(for: .seconds(1))
-        membership = Membership(
-            id: UUID().uuidString,
-            userId: currentUser?.id ?? "",
-            hubId: selectedHubId,
-            status: .active,
-            startDate: Date(),
-            endDate: Calendar.current.date(byAdding: .year, value: 1, to: Date())!,
-            source: .stripe
-        )
-        authState = .authenticated
+        guard let user = currentUser else { return }
+        do {
+            let mem = try await service.createMembership(
+                userId: user.id,
+                hubId: selectedHubId,
+                source: "stripe"
+            )
+            membership = mem
+            authState = .authenticated
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 
     func redeemCode(_ code: String) async -> Bool {
-        try? await Task.sleep(for: .seconds(1))
+        guard let user = currentUser else { return false }
         if code.lowercased() == "femella2026" {
-            membership = Membership(
-                id: UUID().uuidString,
-                userId: currentUser?.id ?? "",
-                hubId: selectedHubId,
-                status: .active,
-                startDate: Date(),
-                endDate: Calendar.current.date(byAdding: .year, value: 1, to: Date())!,
-                source: .code
-            )
-            authState = .authenticated
-            return true
+            do {
+                let mem = try await service.createMembership(
+                    userId: user.id,
+                    hubId: selectedHubId,
+                    source: "code"
+                )
+                membership = mem
+                authState = .authenticated
+                return true
+            } catch {
+                errorMessage = error.localizedDescription
+                return false
+            }
         }
         return false
     }
 
     func signOut() {
+        Task {
+            try? await service.signOut()
+        }
         currentUser = nil
         membership = nil
         authState = .unauthenticated
     }
 
     func deleteAccount() async {
-        try? await Task.sleep(for: .seconds(0.5))
-        signOut()
+        do {
+            try await service.deleteAccount()
+        } catch {
+            print("Delete account error: \(error)")
+        }
+        currentUser = nil
+        membership = nil
+        authState = .unauthenticated
+    }
+
+    // MARK: - Private
+
+    private func loadUserData(userId: String) async {
+        do {
+            let profile = try await service.fetchProfile(userId: userId)
+            currentUser = profile
+
+            if let profile, profile.isProfileComplete {
+                if !profile.homeHubId.isEmpty {
+                    selectedHubId = profile.homeHubId
+                } else if let firstHub = hubs.first {
+                    selectedHubId = firstHub.id
+                }
+
+                let mem = try await service.fetchMembership(userId: userId)
+                membership = mem
+                if mem?.isActive == true {
+                    authState = .authenticated
+                } else {
+                    authState = .paywalled
+                }
+            } else {
+                // Profile exists but is incomplete
+                if currentUser == nil {
+                    currentUser = UserProfile(
+                        id: userId,
+                        firstName: "",
+                        lastName: "",
+                        email: "",
+                        phone: "",
+                        university: "",
+                        degree: "",
+                        company: "",
+                        jobTitle: "",
+                        homeHubId: "",
+                        avatarURL: nil,
+                        showProfileToMembers: true
+                    )
+                }
+                authState = .profileIncomplete
+            }
+        } catch {
+            print("Load user data error: \(error)")
+            authState = .unauthenticated
+        }
     }
 }

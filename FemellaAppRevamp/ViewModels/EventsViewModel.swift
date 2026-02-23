@@ -9,6 +9,8 @@ class EventsViewModel {
     var selectedCategory: EventCategory?
     var searchText: String = ""
 
+    private let service = SupabaseService.shared
+
     var filteredEvents: [Event] {
         var result = events.filter { $0.status == .published || $0.status == .completed }
         if let cat = selectedCategory {
@@ -67,57 +69,68 @@ class EventsViewModel {
 
     func loadEvents(hubId: String) async {
         isLoading = true
-        try? await Task.sleep(for: .seconds(0.5))
-        events = MockDataService.sampleEvents(hubId: hubId)
-        registrations = MockDataService.sampleRegistrations()
+        do {
+            events = try await service.fetchEvents(hubId: hubId)
+            if let userId = service.currentUserId {
+                registrations = try await service.fetchRegistrations(userId: userId)
+            }
+        } catch {
+            print("Failed to load events: \(error)")
+        }
         isLoading = false
     }
 
     func registerForEvent(_ event: Event) async {
-        try? await Task.sleep(for: .seconds(0.5))
-        let status: RegistrationStatus = event.isFull ? .waitlisted : .registered
-        let reg = EventRegistration(
-            id: UUID().uuidString,
-            eventId: event.id,
-            userId: "user-1",
-            status: status,
-            registeredAt: Date(),
-            canceledAt: nil,
-            position: event.isFull ? event.waitlistCount + 1 : nil
-        )
-        registrations.append(reg)
-        if let idx = events.firstIndex(where: { $0.id == event.id }) {
-            var updated = events[idx]
-            let newEvent = Event(
-                id: updated.id, hubId: updated.hubId, category: updated.category,
-                title: updated.title, description: updated.description,
-                heroImageURL: updated.heroImageURL, locationName: updated.locationName,
-                address: updated.address, latitude: updated.latitude, longitude: updated.longitude,
-                startsAt: updated.startsAt, endsAt: updated.endsAt,
-                capacity: updated.capacity,
-                registeredCount: event.isFull ? updated.registeredCount : updated.registeredCount + 1,
-                waitlistCount: event.isFull ? updated.waitlistCount + 1 : updated.waitlistCount,
-                status: updated.status, registrationOpensAt: updated.registrationOpensAt,
-                registrationClosesAt: updated.registrationClosesAt,
-                priceAmount: updated.priceAmount, currency: updated.currency,
-                isNonDeregisterable: updated.isNonDeregisterable,
-                deregistrationDeadlineHoursOverride: updated.deregistrationDeadlineHoursOverride,
-                noShowFeeAmountOverride: updated.noShowFeeAmountOverride,
-                hostName: updated.hostName, attendeeAvatarURLs: updated.attendeeAvatarURLs
+        guard let userId = service.currentUserId else { return }
+        let status: String = event.isFull ? "waitlisted" : "registered"
+        do {
+            let reg = try await service.registerForEvent(
+                eventId: event.id,
+                userId: userId,
+                status: status
             )
-            events[idx] = newEvent
+            registrations.append(reg)
+            // Update local count
+            if let idx = events.firstIndex(where: { $0.id == event.id }) {
+                let updated = events[idx]
+                let newEvent = Event(
+                    id: updated.id, hubId: updated.hubId, category: updated.category,
+                    title: updated.title, description: updated.description,
+                    heroImageURL: updated.heroImageURL, locationName: updated.locationName,
+                    address: updated.address, latitude: updated.latitude, longitude: updated.longitude,
+                    startsAt: updated.startsAt, endsAt: updated.endsAt,
+                    capacity: updated.capacity,
+                    registeredCount: event.isFull ? updated.registeredCount : updated.registeredCount + 1,
+                    waitlistCount: event.isFull ? updated.waitlistCount + 1 : updated.waitlistCount,
+                    status: updated.status, registrationOpensAt: updated.registrationOpensAt,
+                    registrationClosesAt: updated.registrationClosesAt,
+                    priceAmount: updated.priceAmount, currency: updated.currency,
+                    isNonDeregisterable: updated.isNonDeregisterable,
+                    deregistrationDeadlineHoursOverride: updated.deregistrationDeadlineHoursOverride,
+                    noShowFeeAmountOverride: updated.noShowFeeAmountOverride,
+                    hostName: updated.hostName, attendeeAvatarURLs: updated.attendeeAvatarURLs
+                )
+                events[idx] = newEvent
+            }
+        } catch {
+            print("Register error: \(error)")
         }
     }
 
     func deregisterFromEvent(_ event: Event) async {
-        try? await Task.sleep(for: .seconds(0.5))
-        if let idx = registrations.firstIndex(where: { $0.eventId == event.id && $0.status != .canceled }) {
-            let old = registrations[idx]
-            registrations[idx] = EventRegistration(
-                id: old.id, eventId: old.eventId, userId: old.userId,
-                status: .canceled, registeredAt: old.registeredAt,
-                canceledAt: Date(), position: old.position
-            )
+        if let reg = registrations.first(where: { $0.eventId == event.id && $0.status != .canceled }) {
+            do {
+                try await service.deregisterFromEvent(registrationId: reg.id)
+                if let idx = registrations.firstIndex(where: { $0.id == reg.id }) {
+                    registrations[idx] = EventRegistration(
+                        id: reg.id, eventId: reg.eventId, userId: reg.userId,
+                        status: .canceled, registeredAt: reg.registeredAt,
+                        canceledAt: Date(), position: reg.position
+                    )
+                }
+            } catch {
+                print("Deregister error: \(error)")
+            }
         }
     }
 }

@@ -12,107 +12,192 @@ struct ProfileCompletionView: View {
     @State private var selectedHubId: String = ""
     @State private var isLoading: Bool = false
 
+    private let totalSteps = 3
+    @State private var currentStep = 0
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: FemSpacing.xl) {
-                    VStack(spacing: 8) {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                            .font(.system(size: 48))
-                            .foregroundStyle(FemColor.accentPink)
+            ZStack {
+                FemColor.ivory.ignoresSafeArea()
 
-                        Text("Complete Your Profile")
-                            .font(.title2.bold())
-                            .foregroundStyle(FemColor.navy)
-
-                        Text("Tell us about yourself to get started")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(.top, FemSpacing.lg)
-
-                    VStack(spacing: FemSpacing.md) {
-                        SectionHeader(title: "Personal")
-
-                        HStack(spacing: 12) {
-                            FormField(placeholder: "First Name", text: $firstName)
-                            FormField(placeholder: "Last Name", text: $lastName)
-                        }
-
-                        FormField(placeholder: "Phone (optional)", text: $phone)
-                            .keyboardType(.phonePad)
-                    }
-
-                    VStack(spacing: FemSpacing.md) {
-                        SectionHeader(title: "Education")
-                        FormField(placeholder: "University", text: $university)
-                        FormField(placeholder: "Degree", text: $degree)
-                    }
-
-                    VStack(spacing: FemSpacing.md) {
-                        SectionHeader(title: "Professional")
-                        FormField(placeholder: "Company", text: $company)
-                        FormField(placeholder: "Job Title", text: $jobTitle)
-                    }
-
-                    VStack(spacing: FemSpacing.md) {
-                        SectionHeader(title: "Home Hub")
-
-                        VStack(spacing: 8) {
-                            ForEach(MockDataService.hubs.filter(\.isActive)) { hub in
-                                Button {
-                                    selectedHubId = hub.id
-                                } label: {
-                                    HStack {
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(hub.name)
-                                                .font(.body.weight(.medium))
-                                            Text(hub.country)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        Spacer()
-                                        if selectedHubId == hub.id {
-                                            Image(systemName: "checkmark.circle.fill")
-                                                .foregroundStyle(FemColor.accentPink)
-                                        }
-                                    }
-                                    .padding(14)
-                                    .background(selectedHubId == hub.id ? FemColor.accentPink.opacity(0.08) : Color(.secondarySystemBackground))
-                                    .clipShape(.rect(cornerRadius: 12))
-                                }
-                                .foregroundStyle(.primary)
-                            }
-                        }
-                    }
-
-                    Button {
-                        Task { await saveProfile() }
-                    } label: {
-                        Group {
-                            if isLoading {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Continue")
-                            }
-                        }
-                        .femPrimaryButton(isEnabled: isFormValid)
-                    }
-                    .disabled(!isFormValid || isLoading)
-
-                    Spacer().frame(height: FemSpacing.lg)
+                // Decorative
+                GeometryReader { geo in
+                    Circle()
+                        .fill(FemColor.pink.opacity(0.05))
+                        .frame(width: geo.size.width * 0.7)
+                        .offset(x: geo.size.width * 0.5, y: -geo.size.width * 0.15)
                 }
-                .padding(.horizontal, FemSpacing.xl)
+                .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: FemSpacing.xl) {
+                        // Header
+                        VStack(spacing: 12) {
+                            FemLogo(size: 56, style: .pink)
+
+                            Text("Complete Your Profile")
+                                .font(FemFont.display(26))
+                                .foregroundStyle(FemColor.darkBlue)
+
+                            Text("Tell us about yourself to get started")
+                                .font(.subheadline)
+                                .foregroundStyle(FemColor.darkBlue.opacity(0.5))
+                        }
+                        .padding(.top, FemSpacing.xl)
+
+                        // Progress dots
+                        HStack(spacing: 8) {
+                            ForEach(0..<totalSteps, id: \.self) { step in
+                                Capsule()
+                                    .fill(step <= currentStep ? FemColor.pink : FemColor.darkBlue.opacity(0.1))
+                                    .frame(width: step == currentStep ? 32 : 10, height: 6)
+                                    .animation(.snappy, value: currentStep)
+                            }
+                        }
+
+                        // Personal
+                        formSection(title: "Personal", icon: "person.fill") {
+                            HStack(spacing: 12) {
+                                styledField("First Name", text: $firstName)
+                                    .onChange(of: firstName) { _, _ in updateStep() }
+                                styledField("Last Name", text: $lastName)
+                                    .onChange(of: lastName) { _, _ in updateStep() }
+                            }
+                            styledField("Phone (optional)", text: $phone)
+                                .keyboardType(.phonePad)
+                        }
+
+                        // Education
+                        formSection(title: "Education", icon: "graduationcap.fill") {
+                            styledField("University", text: $university)
+                                .onChange(of: university) { _, _ in updateStep() }
+                            styledField("Degree", text: $degree)
+                        }
+
+                        // Professional
+                        formSection(title: "Professional", icon: "briefcase.fill") {
+                            styledField("Company", text: $company)
+                                .onChange(of: company) { _, _ in updateStep() }
+                            styledField("Job Title", text: $jobTitle)
+                        }
+
+                        // Home Hub
+                        formSection(title: "Home Hub", icon: "mappin.circle.fill") {
+                            VStack(spacing: 8) {
+                                ForEach(appVM.hubs.filter(\.isActive)) { hub in
+                                    Button {
+                                        withAnimation(.snappy) {
+                                            selectedHubId = hub.id
+                                            updateStep()
+                                        }
+                                    } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(hub.name)
+                                                    .font(.body.weight(.medium))
+                                                    .foregroundStyle(FemColor.darkBlue)
+                                                Text(hub.country)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Circle()
+                                                .strokeBorder(selectedHubId == hub.id ? FemColor.pink : FemColor.darkBlue.opacity(0.15), lineWidth: 2)
+                                                .frame(width: 22, height: 22)
+                                                .overlay {
+                                                    if selectedHubId == hub.id {
+                                                        Circle()
+                                                            .fill(FemColor.pink)
+                                                            .frame(width: 12, height: 12)
+                                                            .transition(.scale)
+                                                    }
+                                                }
+                                        }
+                                        .padding(14)
+                                        .background(selectedHubId == hub.id ? FemColor.pink.opacity(0.06) : FemColor.ivory)
+                                        .clipShape(.rect(cornerRadius: 14))
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 14)
+                                                .strokeBorder(selectedHubId == hub.id ? FemColor.pink.opacity(0.3) : FemColor.darkBlue.opacity(0.06), lineWidth: 1)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Button {
+                            Task { await saveProfile() }
+                        } label: {
+                            Group {
+                                if isLoading {
+                                    ProgressView().tint(.white)
+                                } else {
+                                    Text("Continue")
+                                }
+                            }
+                            .femPrimaryButton(isEnabled: isFormValid)
+                        }
+                        .disabled(!isFormValid || isLoading)
+
+                        Spacer().frame(height: FemSpacing.lg)
+                    }
+                    .padding(.horizontal, FemSpacing.xl)
+                }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .background(FemColor.blush.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    @ViewBuilder
+    private func formSection(title: String, icon: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: FemSpacing.md) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(FemColor.pink)
+                Text(title)
+                    .font(FemFont.title(18))
+                    .foregroundStyle(FemColor.darkBlue)
+            }
+            content()
+        }
+        .padding(FemSpacing.lg)
+        .background(FemColor.cardBackground)
+        .clipShape(.rect(cornerRadius: 20))
+        .shadow(color: FemColor.darkBlue.opacity(0.04), radius: 8, y: 4)
+    }
+
+    private func styledField(_ placeholder: String, text: Binding<String>) -> some View {
+        TextField(placeholder, text: text)
+            .padding(14)
+            .background(FemColor.ivory)
+            .clipShape(.rect(cornerRadius: 14))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14)
+                    .strokeBorder(FemColor.darkBlue.opacity(0.06), lineWidth: 1)
+            )
     }
 
     private var isFormValid: Bool {
         !firstName.isEmpty && !lastName.isEmpty && !university.isEmpty &&
         !company.isEmpty && !jobTitle.isEmpty && !selectedHubId.isEmpty
+    }
+
+    private func updateStep() {
+        if !firstName.isEmpty && !lastName.isEmpty {
+            if !university.isEmpty {
+                if !company.isEmpty && !selectedHubId.isEmpty {
+                    currentStep = 2
+                } else {
+                    currentStep = 1
+                }
+            } else {
+                currentStep = 0
+            }
+        } else {
+            currentStep = 0
+        }
     }
 
     private func saveProfile() async {
@@ -134,30 +219,5 @@ struct ProfileCompletionView: View {
         )
         await appVM.completeProfile(profile)
         isLoading = false
-    }
-}
-
-private struct SectionHeader: View {
-    let title: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(FemColor.navy)
-            Spacer()
-        }
-    }
-}
-
-private struct FormField: View {
-    let placeholder: String
-    @Binding var text: String
-
-    var body: some View {
-        TextField(placeholder, text: $text)
-            .padding(14)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(.rect(cornerRadius: 12))
     }
 }

@@ -21,7 +21,7 @@ struct NotificationsView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Notifications")
             .toolbar {
                 if notificationsVM.unreadCount > 0 {
@@ -29,7 +29,8 @@ struct NotificationsView: View {
                         Button("Read All") {
                             notificationsVM.markAllAsRead()
                         }
-                        .font(.subheadline)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(FemColor.pink)
                     }
                 }
             }
@@ -47,47 +48,46 @@ private struct NotificationRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(alignment: .top, spacing: FemSpacing.md) {
-                notificationIcon
-                    .frame(width: 36, height: 36)
-                    .background(iconColor.opacity(0.12))
-                    .clipShape(Circle())
+                Circle()
+                    .fill(iconColor.opacity(0.1))
+                    .frame(width: 40, height: 40)
+                    .overlay {
+                        Image(systemName: iconName)
+                            .font(.body)
+                            .foregroundStyle(iconColor)
+                    }
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(notification.title)
                             .font(.subheadline.weight(notification.isRead ? .regular : .semibold))
-                            .foregroundStyle(FemColor.navy)
+                            .foregroundStyle(FemColor.darkBlue)
 
                         Spacer()
 
                         if !notification.isRead {
                             Circle()
-                                .fill(FemColor.accentPink)
+                                .fill(FemColor.pink)
                                 .frame(width: 8, height: 8)
                         }
                     }
 
                     Text(notification.body)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         .lineLimit(2)
 
                     Text(notification.sentAt, style: .relative)
                         .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.3))
                 }
             }
             .padding(FemSpacing.md)
-            .background(notification.isRead ? FemColor.cardBackground : FemColor.accentPink.opacity(0.04))
-            .clipShape(.rect(cornerRadius: 14))
+            .background(notification.isRead ? FemColor.cardBackground : FemColor.pink.opacity(0.04))
+            .clipShape(.rect(cornerRadius: 16))
+            .shadow(color: FemColor.darkBlue.opacity(notification.isRead ? 0.02 : 0.04), radius: 6, y: 3)
         }
         .buttonStyle(.plain)
-    }
-
-    private var notificationIcon: some View {
-        Image(systemName: iconName)
-            .font(.subheadline)
-            .foregroundStyle(iconColor)
     }
 
     private var iconName: String {
@@ -102,11 +102,11 @@ private struct NotificationRow: View {
 
     private var iconColor: Color {
         switch notification.type {
-        case .announcement: FemColor.ctaBlue
-        case .eventUpdate: FemColor.accentPink
-        case .system: FemColor.navy
-        case .membership: .orange
-        case .registration: FemColor.success
+        case .announcement: FemColor.lightBlue
+        case .eventUpdate: FemColor.pink
+        case .system: FemColor.darkBlue
+        case .membership: FemColor.orangeRed
+        case .registration: FemColor.green
         }
     }
 }

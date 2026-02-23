@@ -1,16 +1,77 @@
 import SwiftUI
 
+// MARK: - Brand Colors (femella BI Design Dossier May 2024)
+
 enum FemColor {
-    static let blush = Color(red: 0.96, green: 0.91, blue: 0.89)
-    static let navy = Color(red: 0.13, green: 0.23, blue: 0.35)
-    static let accentPink = Color(red: 0.95, green: 0.56, blue: 0.70)
-    static let accentPinkDark = Color(red: 0.91, green: 0.42, blue: 0.61)
-    static let ctaBlue = Color(red: 0.48, green: 0.62, blue: 0.71)
-    static let success = Color(red: 0.09, green: 0.64, blue: 0.29)
-    static let danger = Color(red: 0.86, green: 0.15, blue: 0.15)
-    static let cardBackground = Color(red: 1.0, green: 0.98, blue: 0.97)
-    static let warmWhite = Color(red: 0.99, green: 0.97, blue: 0.95)
+    // Primary
+    static let darkBlue  = Color(hex: 0x203253)
+    static let pink      = Color(hex: 0xF9829E)
+    static let green     = Color(hex: 0x026914)
+
+    // Secondary
+    static let lightBlue = Color(hex: 0x6E97B4)
+    static let orangeRed = Color(hex: 0xE8532D)
+    static let ivory     = Color(hex: 0xF5ECE5)
+
+    // Semantic aliases (keep backward compatibility)
+    static let navy          = darkBlue
+    static let accentPink    = pink
+    static let accentPinkDark = Color(hex: 0xE0607E)
+    static let ctaBlue       = lightBlue
+    static let success       = green
+    static let danger        = orangeRed
+    static let blush         = ivory
+    static let cardBackground = Color.white
+    static let warmWhite     = Color(hex: 0xFAF6F3)
+
+    // Gradients
+    static let pinkGradient = LinearGradient(
+        colors: [pink, Color(hex: 0xE0607E)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
+    static let heroGradient = LinearGradient(
+        colors: [darkBlue, Color(hex: 0x2E4570)],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
 }
+
+extension Color {
+    init(hex: UInt, alpha: Double = 1.0) {
+        self.init(
+            red: Double((hex >> 16) & 0xFF) / 255.0,
+            green: Double((hex >> 8) & 0xFF) / 255.0,
+            blue: Double(hex & 0xFF) / 255.0,
+            opacity: alpha
+        )
+    }
+}
+
+// MARK: - Brand Typography
+
+enum FemFont {
+    // Display — Loubag (titles, hero text)
+    static func display(_ size: CGFloat) -> Font {
+        .custom("Loubag-Bold", size: size)
+    }
+    static func displayMedium(_ size: CGFloat) -> Font {
+        .custom("Loubag-Medium", size: size)
+    }
+    static func displayLight(_ size: CGFloat) -> Font {
+        .custom("Loubag-Light", size: size)
+    }
+
+    // Title — Unica One (section headers, nav titles)
+    static func title(_ size: CGFloat) -> Font {
+        .custom("UnicaOne-Regular", size: size)
+    }
+
+    // Body — Inter (variable font, all weights)
+    static func body(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: .default)
+    }
+}
+
+// MARK: - Spacing
 
 enum FemSpacing {
     static let xs: CGFloat = 4
@@ -21,12 +82,14 @@ enum FemSpacing {
     static let xxl: CGFloat = 32
 }
 
+// MARK: - View Modifiers
+
 struct FemCardStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
             .background(FemColor.cardBackground)
             .clipShape(.rect(cornerRadius: 20))
-            .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
+            .shadow(color: FemColor.darkBlue.opacity(0.06), radius: 10, y: 5)
     }
 }
 
@@ -35,12 +98,17 @@ struct FemPrimaryButton: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .font(.headline)
+            .font(.custom("Loubag-SemiBold", size: 17))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(isEnabled ? FemColor.accentPink : FemColor.accentPink.opacity(0.4))
-            .clipShape(.rect(cornerRadius: 14))
+            .padding(.vertical, 16)
+            .background(
+                isEnabled
+                    ? AnyShapeStyle(FemColor.pinkGradient)
+                    : AnyShapeStyle(FemColor.pink.opacity(0.35))
+            )
+            .clipShape(Capsule())
+            .shadow(color: FemColor.pink.opacity(isEnabled ? 0.3 : 0), radius: 8, y: 4)
     }
 }
 
@@ -48,13 +116,15 @@ struct FemSecondaryButton: ViewModifier {
     func body(content: Content) -> some View {
         content
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(FemColor.ctaBlue)
+            .foregroundStyle(FemColor.darkBlue)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(FemColor.ctaBlue.opacity(0.12))
-            .clipShape(.rect(cornerRadius: 12))
+            .background(FemColor.darkBlue.opacity(0.08))
+            .clipShape(Capsule())
     }
 }
+
+// MARK: - Reusable Components
 
 struct CategoryChip: View {
     let title: String
@@ -64,12 +134,16 @@ struct CategoryChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(isSelected ? .white : FemColor.navy)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(isSelected ? FemColor.accentPink : FemColor.blush)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(isSelected ? .white : FemColor.darkBlue)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 9)
+                .background(isSelected ? FemColor.pink : FemColor.ivory.opacity(0.6))
                 .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(isSelected ? Color.clear : FemColor.darkBlue.opacity(0.1), lineWidth: 1)
+                )
         }
     }
 }
@@ -81,7 +155,7 @@ struct AvatarView: View {
 
     var body: some View {
         if let url {
-            Color(FemColor.blush)
+            Color(FemColor.ivory)
                 .frame(width: size, height: size)
                 .overlay {
                     AsyncImage(url: url) { phase in
@@ -92,15 +166,17 @@ struct AvatarView: View {
                     .allowsHitTesting(false)
                 }
                 .clipShape(Circle())
+                .overlay(Circle().strokeBorder(FemColor.pink.opacity(0.3), lineWidth: 2))
         } else {
             Circle()
-                .fill(FemColor.accentPink.opacity(0.2))
+                .fill(FemColor.pink.opacity(0.12))
                 .frame(width: size, height: size)
                 .overlay {
                     Text(initials)
-                        .font(.system(size: size * 0.36, weight: .semibold))
-                        .foregroundStyle(FemColor.accentPinkDark)
+                        .font(FemFont.display(size * 0.36))
+                        .foregroundStyle(FemColor.pink)
                 }
+                .overlay(Circle().strokeBorder(FemColor.pink.opacity(0.2), lineWidth: 2))
         }
     }
 }
@@ -111,14 +187,76 @@ struct StatusBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.caption.weight(.semibold))
+            .font(.caption.weight(.bold))
             .foregroundStyle(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(color.opacity(0.12))
+            .background(color.opacity(0.1))
             .clipShape(Capsule())
     }
 }
+
+// MARK: - Decorative Brand Elements
+
+/// Overlapping circles — the signature femella brand pattern
+struct CirclePattern: View {
+    var size: CGFloat = 200
+    var opacity: Double = 0.08
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(FemColor.pink.opacity(opacity))
+                .frame(width: size, height: size)
+                .offset(x: -size * 0.25, y: -size * 0.1)
+            Circle()
+                .fill(FemColor.lightBlue.opacity(opacity * 0.8))
+                .frame(width: size * 0.75, height: size * 0.75)
+                .offset(x: size * 0.2, y: size * 0.05)
+            Circle()
+                .fill(FemColor.green.opacity(opacity * 0.6))
+                .frame(width: size * 0.5, height: size * 0.5)
+                .offset(x: -size * 0.05, y: size * 0.25)
+        }
+    }
+}
+
+/// "f" logo circle
+struct FemLogo: View {
+    var size: CGFloat = 56
+    var style: LogoStyle = .pink
+
+    enum LogoStyle {
+        case pink, white, dark
+    }
+
+    var body: some View {
+        let bgColor: Color = switch style {
+        case .pink: FemColor.pink
+        case .white: .white
+        case .dark: FemColor.darkBlue
+        }
+        let fgColor: Color = switch style {
+        case .pink: .white
+        case .white: FemColor.pink
+        case .dark: .white
+        }
+
+        Circle()
+            .fill(bgColor)
+            .frame(width: size, height: size)
+            .overlay {
+                Image("BrandLogo")
+                    .resizable()
+                    .scaledToFit()
+                    // If the logo has a transparent background, this handles it cleanly
+                    .padding(size * 0.15) 
+            }
+            .shadow(color: bgColor.opacity(0.25), radius: 10, y: 4)
+    }
+}
+
+// MARK: - View Extensions
 
 extension View {
     func femCard() -> some View {

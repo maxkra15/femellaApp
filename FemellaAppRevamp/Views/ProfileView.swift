@@ -1,9 +1,12 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @Environment(AppViewModel.self) private var appVM
     @State private var showDeleteAlert: Bool = false
     @State private var showEditProfile: Bool = false
+    @State private var avatarPickerItem: PhotosPickerItem?
+    @State private var isUploadingAvatar: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -18,16 +21,16 @@ struct ProfileView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showEditProfile = true
                     } label: {
-                        Image(systemName: "pencil.circle")
+                        Image(systemName: "pencil.circle.fill")
                             .font(.title3)
-                            .foregroundStyle(FemColor.navy)
+                            .foregroundStyle(FemColor.pink)
                     }
                 }
             }
@@ -47,20 +50,53 @@ struct ProfileView: View {
 
     private var profileHeader: some View {
         VStack(spacing: FemSpacing.md) {
-            AvatarView(
-                initials: appVM.currentUser?.initials ?? "?",
-                url: appVM.currentUser?.avatarURL,
-                size: 80
-            )
+            PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+                ZStack {
+                    // Decorative ring
+                    Circle()
+                        .strokeBorder(
+                            AngularGradient(
+                                colors: [FemColor.pink, FemColor.lightBlue, FemColor.green, FemColor.pink],
+                                center: .center
+                            ),
+                            lineWidth: 3
+                        )
+                        .frame(width: 96, height: 96)
+
+                    AvatarView(
+                        initials: appVM.currentUser?.initials ?? "?",
+                        url: appVM.currentUser?.avatarURL,
+                        size: 84
+                    )
+
+                    // Camera badge
+                    Circle()
+                        .fill(FemColor.pink)
+                        .frame(width: 28, height: 28)
+                        .overlay {
+                            if isUploadingAvatar {
+                                ProgressView().tint(.white).scaleEffect(0.6)
+                            } else {
+                                Image(systemName: "camera.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                        .offset(x: 32, y: 32)
+                }
+            }
+            .onChange(of: avatarPickerItem) { _, newItem in
+                Task { await uploadAvatar(item: newItem) }
+            }
 
             VStack(spacing: 4) {
                 Text(appVM.currentUser?.fullName ?? "Member")
-                    .font(.title2.bold())
-                    .foregroundStyle(FemColor.navy)
+                    .font(FemFont.display(22))
+                    .foregroundStyle(FemColor.darkBlue)
 
                 Text(appVM.currentUser?.email ?? "")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.5))
             }
         }
         .frame(maxWidth: .infinity)
@@ -73,35 +109,43 @@ struct ProfileView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Membership")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.4))
 
                     HStack(spacing: 8) {
                         Text(appVM.selectedHub?.name ?? "")
                             .font(.headline)
-                            .foregroundStyle(FemColor.navy)
+                            .foregroundStyle(FemColor.darkBlue)
 
                         StatusBadge(
                             text: appVM.isMembershipActive ? "Active" : "Inactive",
-                            color: appVM.isMembershipActive ? FemColor.success : FemColor.danger
+                            color: appVM.isMembershipActive ? FemColor.green : FemColor.orangeRed
                         )
                     }
                 }
 
                 Spacer()
 
-                Image(systemName: "crown.fill")
-                    .font(.title2)
-                    .foregroundStyle(FemColor.accentPink)
+                Circle()
+                    .fill(FemColor.pink.opacity(0.1))
+                    .frame(width: 44, height: 44)
+                    .overlay {
+                        Image(systemName: "crown.fill")
+                            .font(.title3)
+                            .foregroundStyle(FemColor.pink)
+                    }
             }
 
             if let membership = appVM.membership {
+                Divider()
+
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Valid Until")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(FemColor.darkBlue.opacity(0.4))
                         Text(membership.endDate.formatted(.dateTime.month(.wide).day().year()))
                             .font(.subheadline.weight(.medium))
+                            .foregroundStyle(FemColor.darkBlue)
                     }
 
                     Spacer()
@@ -109,9 +153,10 @@ struct ProfileView: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("Source")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(FemColor.darkBlue.opacity(0.4))
                         Text(membership.source.rawValue.capitalized)
                             .font(.subheadline.weight(.medium))
+                            .foregroundStyle(FemColor.darkBlue)
                     }
                 }
             }
@@ -123,8 +168,8 @@ struct ProfileView: View {
     private var hubSection: some View {
         VStack(alignment: .leading, spacing: FemSpacing.md) {
             Text("Visit Another Hub")
-                .font(.headline)
-                .foregroundStyle(FemColor.navy)
+                .font(FemFont.title(18))
+                .foregroundStyle(FemColor.darkBlue)
 
             ScrollView(.horizontal) {
                 HStack(spacing: 10) {
@@ -133,18 +178,21 @@ struct ProfileView: View {
                             appVM.selectedHubId = hub.id
                         } label: {
                             VStack(spacing: 6) {
-                                Image(systemName: "mappin.circle.fill")
-                                    .font(.title2)
-                                    .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.accentPink : .secondary)
+                                Circle()
+                                    .fill(appVM.selectedHubId == hub.id ? FemColor.pink.opacity(0.12) : FemColor.ivory)
+                                    .frame(width: 44, height: 44)
+                                    .overlay {
+                                        Image(systemName: "mappin.circle.fill")
+                                            .font(.title3)
+                                            .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.pink : FemColor.darkBlue.opacity(0.3))
+                                    }
 
                                 Text(hub.name)
                                     .font(.caption.weight(.medium))
-                                    .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.navy : .secondary)
+                                    .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.darkBlue : FemColor.darkBlue.opacity(0.5))
                             }
                             .frame(width: 72)
                             .padding(.vertical, 12)
-                            .background(appVM.selectedHubId == hub.id ? FemColor.accentPink.opacity(0.08) : Color(.secondarySystemBackground))
-                            .clipShape(.rect(cornerRadius: 14))
                         }
                     }
                 }
@@ -154,13 +202,17 @@ struct ProfileView: View {
     }
 
     private var profileDetails: some View {
-        VStack(spacing: FemSpacing.sm) {
+        VStack(spacing: 0) {
             if let user = appVM.currentUser {
                 ProfileDetailRow(icon: "building.2", label: "Company", value: user.company)
+                Divider().padding(.leading, 44)
                 ProfileDetailRow(icon: "briefcase", label: "Job Title", value: user.jobTitle)
+                Divider().padding(.leading, 44)
                 ProfileDetailRow(icon: "graduationcap", label: "University", value: user.university)
+                Divider().padding(.leading, 44)
                 ProfileDetailRow(icon: "text.book.closed", label: "Degree", value: user.degree)
                 if !user.phone.isEmpty {
+                    Divider().padding(.leading, 44)
                     ProfileDetailRow(icon: "phone", label: "Phone", value: user.phone)
                 }
             }
@@ -179,11 +231,11 @@ struct ProfileView: View {
                     Text("Sign Out")
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(FemColor.navy)
+                .foregroundStyle(FemColor.darkBlue)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(.rect(cornerRadius: 14))
+                .background(FemColor.darkBlue.opacity(0.06))
+                .clipShape(Capsule())
             }
 
             Button {
@@ -194,13 +246,39 @@ struct ProfileView: View {
                     Text("Delete Account")
                 }
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(FemColor.danger)
+                .foregroundStyle(FemColor.orangeRed)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(FemColor.danger.opacity(0.06))
-                .clipShape(.rect(cornerRadius: 14))
+                .background(FemColor.orangeRed.opacity(0.06))
+                .clipShape(Capsule())
             }
         }
+    }
+
+    // MARK: - Avatar Upload
+
+    private func uploadAvatar(item: PhotosPickerItem?) async {
+        guard let item else { return }
+        isUploadingAvatar = true
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else { return }
+
+            // Compress to JPEG
+            guard let uiImage = UIImage(data: data),
+                  let jpeg = uiImage.jpegData(compressionQuality: 0.7) else { return }
+
+            let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
+
+            // Update the profile
+            if var user = appVM.currentUser {
+                user.avatarURL = URL(string: publicURL)
+                appVM.currentUser = user
+                try? await SupabaseService.shared.upsertProfile(user)
+            }
+        } catch {
+            print("Avatar upload error: \(error)")
+        }
+        isUploadingAvatar = false
     }
 }
 
@@ -211,17 +289,22 @@ private struct ProfileDetailRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.subheadline)
-                .foregroundStyle(FemColor.accentPink)
-                .frame(width: 24)
+            Circle()
+                .fill(FemColor.pink.opacity(0.08))
+                .frame(width: 32, height: 32)
+                .overlay {
+                    Image(systemName: icon)
+                        .font(.caption)
+                        .foregroundStyle(FemColor.pink)
+                }
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.4))
                 Text(value)
                     .font(.subheadline)
+                    .foregroundStyle(FemColor.darkBlue)
             }
 
             Spacer()
@@ -254,19 +337,25 @@ struct EditProfileView: View {
                 }
                 Section("Privacy") {
                     Toggle("Show Profile to Members", isOn: $showProfile)
+                        .tint(FemColor.pink)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         saveProfile()
                         dismiss()
                     }
+                    .foregroundStyle(FemColor.pink)
+                    .fontWeight(.semibold)
                 }
             }
             .onAppear {
@@ -291,5 +380,8 @@ struct EditProfileView: View {
         user.jobTitle = jobTitle
         user.showProfileToMembers = showProfile
         appVM.currentUser = user
+        Task {
+            try? await SupabaseService.shared.upsertProfile(user)
+        }
     }
 }

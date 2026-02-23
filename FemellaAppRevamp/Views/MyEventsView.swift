@@ -43,7 +43,7 @@ struct MyEventsView: View {
                     EventDetailView(event: event, eventsVM: eventsVM)
                 }
             }
-            .background(FemColor.blush.ignoresSafeArea())
+            .background(FemColor.ivory.ignoresSafeArea())
             .navigationTitle("My Events")
         }
     }
@@ -55,7 +55,7 @@ private struct MyEventCard: View {
 
     var body: some View {
         HStack(spacing: FemSpacing.lg) {
-            Color(.secondarySystemBackground)
+            Color(FemColor.ivory)
                 .frame(width: 80, height: 80)
                 .overlay {
                     AsyncImage(url: event.heroImageURL) { phase in
@@ -65,17 +65,17 @@ private struct MyEventCard: View {
                     }
                     .allowsHitTesting(false)
                 }
-                .clipShape(.rect(cornerRadius: 14))
+                .clipShape(.rect(cornerRadius: 16))
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(event.title)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(FemColor.navy)
+                    .foregroundStyle(FemColor.darkBlue)
                     .lineLimit(2)
 
                 Text(event.startsAt.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.5))
 
                 HStack(spacing: 8) {
                     statusBadge
@@ -87,7 +87,7 @@ private struct MyEventCard: View {
                         Text("\(event.registeredCount)/\(event.capacity)")
                     }
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.4))
                 }
             }
         }
@@ -100,13 +100,13 @@ private struct MyEventCard: View {
         if let reg = registration {
             switch reg.status {
             case .registered:
-                StatusBadge(text: "Registered", color: FemColor.success)
+                StatusBadge(text: "Registered", color: FemColor.green)
             case .waitlisted:
-                StatusBadge(text: "Waitlisted", color: .orange)
+                StatusBadge(text: "Waitlisted", color: FemColor.orangeRed)
             case .attended:
-                StatusBadge(text: "Participated", color: FemColor.success)
+                StatusBadge(text: "Participated", color: FemColor.green)
             case .noShow:
-                StatusBadge(text: "No Show", color: FemColor.danger)
+                StatusBadge(text: "No Show", color: FemColor.orangeRed)
             case .canceled:
                 StatusBadge(text: "Cancelled", color: .secondary)
             }
