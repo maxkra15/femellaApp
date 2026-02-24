@@ -11,9 +11,22 @@ struct ProfileCompletionView: View {
     @State private var company: String = ""
     @State private var jobTitle: String = ""
     @State private var selectedHubId: String = ""
+    @State private var linkedinUrl: String = ""
+    @State private var funFacts: String = ""
+    @State private var hobbies: String = ""
+    @State private var includeBirthday: Bool = false
+    @State private var birthday: Date = Date()
+    @State private var likesSports: Bool = false
+    @State private var interestedInRunningClub: Bool = false
+    @State private var interestedInCyclingClub: Bool = false
     @State private var isLoading: Bool = false
     @State private var avatarPickerItem: PhotosPickerItem?
     @State private var isUploadingAvatar: Bool = false
+
+    private enum Field: Hashable {
+        case firstName, lastName, phone, university, degree, company, jobTitle, linkedin, funFacts, hobbies
+    }
+    @FocusState private var focusedField: Field?
 
     private let totalSteps = 3
     @State private var currentStep = 0
@@ -50,7 +63,7 @@ struct ProfileCompletionView: View {
 
                         // Avatar Picker
                         let currentUser = appVM.currentUser
-                        PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+                        PhotosPicker(selection: $avatarPickerItem, matching: .images, photoLibrary: .shared()) {
                             ZStack {
                                 Circle()
                                     .fill(FemColor.ivory)
@@ -96,26 +109,101 @@ struct ProfileCompletionView: View {
                         formSection(title: "Personal", icon: "person.fill") {
                             HStack(spacing: 12) {
                                 styledField("First Name", text: $firstName)
+                                    .focused($focusedField, equals: .firstName)
+                                    .submitLabel(.next)
+                                    .onSubmit { focusedField = .lastName }
                                     .onChange(of: firstName) { _, _ in updateStep() }
                                 styledField("Last Name", text: $lastName)
+                                    .focused($focusedField, equals: .lastName)
+                                    .submitLabel(.next)
+                                    .onSubmit { focusedField = .phone }
                                     .onChange(of: lastName) { _, _ in updateStep() }
                             }
                             styledField("Phone (optional)", text: $phone)
                                 .keyboardType(.phonePad)
+                                .focused($focusedField, equals: .phone)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .university }
                         }
 
                         // Education
                         formSection(title: "Education", icon: "graduationcap.fill") {
                             styledField("University", text: $university)
+                                .focused($focusedField, equals: .university)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .degree }
                                 .onChange(of: university) { _, _ in updateStep() }
                             styledField("Degree", text: $degree)
+                                .focused($focusedField, equals: .degree)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .company }
                         }
 
                         // Professional
                         formSection(title: "Professional", icon: "briefcase.fill") {
                             styledField("Company", text: $company)
+                                .focused($focusedField, equals: .company)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .jobTitle }
                                 .onChange(of: company) { _, _ in updateStep() }
                             styledField("Job Title", text: $jobTitle)
+                                .focused($focusedField, equals: .jobTitle)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .linkedin }
+                        }
+
+                        // About You
+                        formSection(title: "About You", icon: "person.text.rectangle.fill") {
+                            styledField("LinkedIn URL (optional)", text: $linkedinUrl)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .focused($focusedField, equals: .linkedin)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .funFacts }
+                            
+                            styledField("Fun Facts (optional)", text: $funFacts)
+                                .focused($focusedField, equals: .funFacts)
+                                .submitLabel(.next)
+                                .onSubmit { focusedField = .hobbies }
+                            
+                            styledField("Hobbies (optional)", text: $hobbies)
+                                .focused($focusedField, equals: .hobbies)
+                                .submitLabel(.done)
+                                .onSubmit { focusedField = nil }
+                            
+                            Toggle("Include Birthday", isOn: $includeBirthday)
+                                .tint(FemColor.pink)
+                                .font(.subheadline)
+                                .foregroundStyle(FemColor.darkBlue)
+                                .padding(.top, 4)
+                            
+                            if includeBirthday {
+                                DatePicker("Birthday", selection: $birthday, displayedComponents: .date)
+                                    .font(.subheadline)
+                                    .foregroundStyle(FemColor.darkBlue)
+                                    .tint(FemColor.pink)
+                            }
+                        }
+                        
+                        // Sports & Clubs
+                        formSection(title: "Sports & Clubs", icon: "figure.run.circle.fill") {
+                            Toggle("Do you like sports?", isOn: $likesSports)
+                                .tint(FemColor.pink)
+                                .font(.subheadline)
+                                .foregroundStyle(FemColor.darkBlue)
+                            
+                            if likesSports {
+                                VStack(spacing: 12) {
+                                    Toggle("Interested in Running Club?", isOn: $interestedInRunningClub)
+                                        .tint(FemColor.pink)
+                                    Toggle("Interested in Cycling Club?", isOn: $interestedInCyclingClub)
+                                        .tint(FemColor.pink)
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(FemColor.darkBlue)
+                                .padding(.leading, 12)
+                                .padding(.top, 8)
+                            }
                         }
 
                         // Home Hub
@@ -191,6 +279,9 @@ struct ProfileCompletionView: View {
     private func uploadAvatar(item: PhotosPickerItem?) async {
         guard let item else { return }
         isUploadingAvatar = true
+        defer {
+            isUploadingAvatar = false
+        }
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
             guard let uiImage = UIImage(data: data),
@@ -199,14 +290,14 @@ struct ProfileCompletionView: View {
             let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
 
             if var user = appVM.currentUser {
-                user.avatarURL = URL(string: publicURL)
+                let cacheBuster = UUID().uuidString
+                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
                 appVM.currentUser = user
                 try? await SupabaseService.shared.upsertProfile(user)
             }
         } catch {
             print("Avatar upload error: \(error)")
         }
-        isUploadingAvatar = false
     }
 
     @ViewBuilder
@@ -275,7 +366,14 @@ struct ProfileCompletionView: View {
             jobTitle: jobTitle,
             homeHubId: selectedHubId,
             avatarURL: nil,
-            showProfileToMembers: true
+            showProfileToMembers: true,
+            linkedinUrl: linkedinUrl.isEmpty ? nil : linkedinUrl,
+            birthday: includeBirthday ? birthday : nil,
+            funFacts: funFacts.isEmpty ? nil : funFacts,
+            hobbies: hobbies.isEmpty ? nil : hobbies,
+            likesSports: likesSports,
+            interestedInRunningClub: interestedInRunningClub,
+            interestedInCyclingClub: interestedInCyclingClub
         )
         await appVM.completeProfile(profile)
         isLoading = false

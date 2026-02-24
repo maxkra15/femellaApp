@@ -9,6 +9,12 @@ struct LoginView: View {
     @State private var errorMessage: String?
     @State private var appeared: Bool = false
 
+    private enum Field {
+        case email
+        case password
+    }
+    @FocusState private var focusedField: Field?
+
     var body: some View {
         ZStack {
             // Background
@@ -69,6 +75,11 @@ struct LoginView: View {
                                     .textContentType(.emailAddress)
                                     .autocorrectionDisabled()
                                     .textInputAutocapitalization(.never)
+                                    .focused($focusedField, equals: .email)
+                                    .submitLabel(.next)
+                                    .onSubmit {
+                                        focusedField = .password
+                                    }
                             }
                             .padding(14)
                             .background(FemColor.ivory)
@@ -84,6 +95,14 @@ struct LoginView: View {
                                     .frame(width: 20)
                                 SecureField("Password", text: $password)
                                     .textContentType(isSignUp ? .newPassword : .password)
+                                    .focused($focusedField, equals: .password)
+                                    .submitLabel(.done)
+                                    .onSubmit {
+                                        focusedField = nil
+                                        if isFormValid {
+                                            Task { await handleAuth() }
+                                        }
+                                    }
                             }
                             .padding(14)
                             .background(FemColor.ivory)

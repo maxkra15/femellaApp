@@ -14,14 +14,13 @@ struct ProfileView: View {
                 VStack(spacing: FemSpacing.xl) {
                     profileHeader
                     membershipCard
-                    hubSection
                     profileDetails
                     accountActions
                 }
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .background(FemColor.ivoryBlueWash.ignoresSafeArea())
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -51,7 +50,7 @@ struct ProfileView: View {
     private var profileHeader: some View {
         VStack(spacing: FemSpacing.md) {
             let currentUser = appVM.currentUser
-            PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+            PhotosPicker(selection: $avatarPickerItem, matching: .images, photoLibrary: .shared()) {
                 ZStack {
                     // Decorative ring
                     Circle()
@@ -113,9 +112,12 @@ struct ProfileView: View {
                         .foregroundStyle(FemColor.darkBlue.opacity(0.4))
 
                     HStack(spacing: 8) {
-                        Text(appVM.selectedHub?.name ?? "")
-                            .font(.headline)
-                            .foregroundStyle(FemColor.darkBlue)
+                        if let hubId = appVM.membership?.hubId ?? appVM.currentUser?.homeHubId,
+                           let homeHub = appVM.hubs.first(where: { $0.id == hubId }) {
+                            Text(homeHub.name)
+                                .font(.headline)
+                                .foregroundStyle(FemColor.darkBlue)
+                        }
 
                         StatusBadge(
                             text: appVM.isMembershipActive ? "Active" : "Inactive",
@@ -166,41 +168,7 @@ struct ProfileView: View {
         .femCard()
     }
 
-    private var hubSection: some View {
-        VStack(alignment: .leading, spacing: FemSpacing.md) {
-            Text("Visit Another Hub")
-                .font(FemFont.title(18))
-                .foregroundStyle(FemColor.darkBlue)
-
-            ScrollView(.horizontal) {
-                HStack(spacing: 10) {
-                    ForEach(appVM.hubs.filter(\.isActive)) { hub in
-                        Button {
-                            appVM.selectedHubId = hub.id
-                        } label: {
-                            VStack(spacing: 6) {
-                                Circle()
-                                    .fill(appVM.selectedHubId == hub.id ? FemColor.pink.opacity(0.12) : FemColor.ivory)
-                                    .frame(width: 44, height: 44)
-                                    .overlay {
-                                        Image(systemName: "mappin.circle.fill")
-                                            .font(.title3)
-                                            .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.pink : FemColor.darkBlue.opacity(0.3))
-                                    }
-
-                                Text(hub.name)
-                                    .font(.caption.weight(.medium))
-                                    .foregroundStyle(appVM.selectedHubId == hub.id ? FemColor.darkBlue : FemColor.darkBlue.opacity(0.5))
-                            }
-                            .frame(width: 72)
-                            .padding(.vertical, 12)
-                        }
-                    }
-                }
-            }
-            .scrollIndicators(.hidden)
-        }
-    }
+    // MARK: - removed hub section
 
     private var profileDetails: some View {
         VStack(spacing: 0) {
@@ -215,6 +183,26 @@ struct ProfileView: View {
                 if !user.phone.isEmpty {
                     Divider().padding(.leading, 44)
                     ProfileDetailRow(icon: "phone", label: "Phone", value: user.phone)
+                }
+                if let bday = user.birthday {
+                    Divider().padding(.leading, 44)
+                    ProfileDetailRow(icon: "gift", label: "Birthday", value: bday.formatted(.dateTime.day().month().year()))
+                }
+                if let ln = user.linkedinUrl, !ln.isEmpty {
+                    Divider().padding(.leading, 44)
+                    ProfileDetailRow(icon: "link", label: "LinkedIn", value: ln)
+                }
+                if let fun = user.funFacts, !fun.isEmpty {
+                    Divider().padding(.leading, 44)
+                    ProfileDetailRow(icon: "star", label: "Fun Facts", value: fun)
+                }
+                if let hobbies = user.hobbies, !hobbies.isEmpty {
+                    Divider().padding(.leading, 44)
+                    ProfileDetailRow(icon: "heart", label: "Hobbies", value: hobbies)
+                }
+                if user.likesSports {
+                    Divider().padding(.leading, 44)
+                    ProfileDetailRow(icon: "figure.run", label: "Sports", value: "Likes Sports" + (user.interestedInRunningClub ? ", Running Club" : "") + (user.interestedInCyclingClub ? ", Cycling Club" : ""))
                 }
             }
         }
@@ -261,6 +249,9 @@ struct ProfileView: View {
     private func uploadAvatar(item: PhotosPickerItem?) async {
         guard let item else { return }
         isUploadingAvatar = true
+        defer {
+            isUploadingAvatar = false
+        }
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
 
@@ -270,16 +261,16 @@ struct ProfileView: View {
 
             let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
 
-            // Update the profile
+            // Update the profile and bypass cache for the new image UI
             if var user = appVM.currentUser {
-                user.avatarURL = URL(string: publicURL)
+                let cacheBuster = UUID().uuidString
+                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
                 appVM.currentUser = user
                 try? await SupabaseService.shared.upsertProfile(user)
             }
         } catch {
             print("Avatar upload error: \(error)")
         }
-        isUploadingAvatar = false
     }
 }
 
@@ -323,15 +314,28 @@ struct EditProfileView: View {
     @State private var company: String = ""
     @State private var jobTitle: String = ""
     @State private var showProfile: Bool = true
+    @State private var linkedinUrl: String = ""
+    @State private var funFacts: String = ""
+    @State private var hobbies: String = ""
+    @State private var includeBirthday: Bool = false
+    @State private var birthday: Date = Date()
+    @State private var likesSports: Bool = false
+    @State private var interestedInRunningClub: Bool = false
+    @State private var interestedInCyclingClub: Bool = false
     @State private var avatarPickerItem: PhotosPickerItem?
     @State private var isUploadingAvatar: Bool = false
+
+    private enum Field: Hashable {
+        case firstName, lastName, phone, company, jobTitle, linkedin, funFacts, hobbies
+    }
+    @FocusState private var focusedField: Field?
 
     var body: some View {
         NavigationStack {
             VStack {
                 // Avatar Picker Header
                 let currentUser = appVM.currentUser
-                PhotosPicker(selection: $avatarPickerItem, matching: .images) {
+                PhotosPicker(selection: $avatarPickerItem, matching: .images, photoLibrary: .shared()) {
                     ZStack {
                         Circle()
                             .strokeBorder(FemColor.darkBlue.opacity(0.1), lineWidth: 1)
@@ -365,13 +369,56 @@ struct EditProfileView: View {
 
                 Form {
                     Section("Personal") {
-                    TextField("First Name", text: $firstName)
-                    TextField("Last Name", text: $lastName)
-                    TextField("Phone", text: $phone)
-                }
-                Section("Professional") {
-                    TextField("Company", text: $company)
-                    TextField("Job Title", text: $jobTitle)
+                        TextField("First Name", text: $firstName)
+                            .focused($focusedField, equals: .firstName)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .lastName }
+                        TextField("Last Name", text: $lastName)
+                            .focused($focusedField, equals: .lastName)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .phone }
+                        TextField("Phone", text: $phone)
+                            .keyboardType(.phonePad)
+                            .focused($focusedField, equals: .phone)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .company }
+                    }
+                    Section("Professional") {
+                        TextField("Company", text: $company)
+                            .focused($focusedField, equals: .company)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .jobTitle }
+                        TextField("Job Title", text: $jobTitle)
+                            .focused($focusedField, equals: .jobTitle)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .linkedin }
+                        TextField("LinkedIn URL", text: $linkedinUrl)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .focused($focusedField, equals: .linkedin)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .funFacts }
+                    }
+                    Section("About You") {
+                        Toggle("Include Birthday", isOn: $includeBirthday)
+                        if includeBirthday {
+                            DatePicker("Birthday", selection: $birthday, displayedComponents: .date)
+                        }
+                        TextField("Fun Facts", text: $funFacts)
+                            .focused($focusedField, equals: .funFacts)
+                            .submitLabel(.next)
+                            .onSubmit { focusedField = .hobbies }
+                        TextField("Hobbies", text: $hobbies)
+                            .focused($focusedField, equals: .hobbies)
+                            .submitLabel(.done)
+                            .onSubmit { focusedField = nil }
+                    }
+                Section("Interests") {
+                    Toggle("Do you like sports?", isOn: $likesSports)
+                    if likesSports {
+                        Toggle("Interested in Running Club?", isOn: $interestedInRunningClub)
+                        Toggle("Interested in Cycling Club?", isOn: $interestedInCyclingClub)
+                    }
                 }
                 Section("Privacy") {
                     Toggle("Show Profile to Members", isOn: $showProfile)
@@ -380,7 +427,7 @@ struct EditProfileView: View {
                 }
                 .scrollContentBackground(.hidden)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .background(FemColor.ivoryBlueWash.ignoresSafeArea())
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -405,6 +452,16 @@ struct EditProfileView: View {
                     company = user.company
                     jobTitle = user.jobTitle
                     showProfile = user.showProfileToMembers
+                    linkedinUrl = user.linkedinUrl ?? ""
+                    if let bday = user.birthday {
+                        includeBirthday = true
+                        birthday = bday
+                    }
+                    funFacts = user.funFacts ?? ""
+                    hobbies = user.hobbies ?? ""
+                    likesSports = user.likesSports
+                    interestedInRunningClub = user.interestedInRunningClub
+                    interestedInCyclingClub = user.interestedInCyclingClub
                 }
             }
         }
@@ -418,6 +475,13 @@ struct EditProfileView: View {
         user.company = company
         user.jobTitle = jobTitle
         user.showProfileToMembers = showProfile
+        user.linkedinUrl = linkedinUrl.isEmpty ? nil : linkedinUrl
+        user.birthday = includeBirthday ? birthday : nil
+        user.funFacts = funFacts.isEmpty ? nil : funFacts
+        user.hobbies = hobbies.isEmpty ? nil : hobbies
+        user.likesSports = likesSports
+        user.interestedInRunningClub = interestedInRunningClub
+        user.interestedInCyclingClub = interestedInCyclingClub
         appVM.currentUser = user
         Task {
             try? await SupabaseService.shared.upsertProfile(user)
@@ -427,6 +491,9 @@ struct EditProfileView: View {
     private func uploadAvatar(item: PhotosPickerItem?) async {
         guard let item else { return }
         isUploadingAvatar = true
+        defer {
+            isUploadingAvatar = false
+        }
         do {
             guard let data = try await item.loadTransferable(type: Data.self) else { return }
             guard let uiImage = UIImage(data: data),
@@ -435,13 +502,13 @@ struct EditProfileView: View {
             let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
 
             if var user = appVM.currentUser {
-                user.avatarURL = URL(string: publicURL)
+                let cacheBuster = UUID().uuidString
+                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
                 appVM.currentUser = user
                 try? await SupabaseService.shared.upsertProfile(user)
             }
         } catch {
             print("Avatar upload error: \(error)")
         }
-        isUploadingAvatar = false
     }
 }

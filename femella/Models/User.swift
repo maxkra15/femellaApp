@@ -13,6 +13,13 @@ nonisolated struct UserProfile: Identifiable, Hashable, Codable, Sendable {
     var homeHubId: String
     var avatarURL: URL?
     var showProfileToMembers: Bool
+    var linkedinUrl: String?
+    var birthday: Date?
+    var funFacts: String?
+    var hobbies: String?
+    var likesSports: Bool
+    var interestedInRunningClub: Bool
+    var interestedInCyclingClub: Bool
 
     var fullName: String { "\(firstName) \(lastName)" }
     var initials: String {

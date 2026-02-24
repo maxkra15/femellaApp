@@ -31,10 +31,10 @@ struct ContentView: View {
                 .badge(notificationsVM.unreadCount)
                 .tag(2)
 
-            SurveysView(surveysVM: surveysVM)
+            InteractView(surveysVM: surveysVM)
                 .tabItem {
-                    Image(systemName: "doc.text")
-                    Text("Surveys")
+                    Image(systemName: "person.2.fill")
+                    Text("Interact")
                 }
                 .tag(3)
 
@@ -45,6 +45,6 @@ struct ContentView: View {
                 }
                 .tag(4)
         }
-        .tint(FemColor.pink)
+        .tint(FemColor.darkBlue)
     }
 }

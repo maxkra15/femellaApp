@@ -21,7 +21,7 @@ struct NotificationsView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .background(FemColor.ivoryBlueWash.ignoresSafeArea())
             .navigationTitle("Notifications")
             .toolbar {
                 if notificationsVM.unreadCount > 0 {
@@ -85,6 +85,13 @@ private struct NotificationRow: View {
             .padding(FemSpacing.md)
             .background(notification.isRead ? FemColor.cardBackground : FemColor.pink.opacity(0.04))
             .clipShape(.rect(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(
+                        FemColor.darkBlue.opacity(notification.isRead ? 0.06 : 0.1),
+                        lineWidth: 1
+                    )
+            )
             .shadow(color: FemColor.darkBlue.opacity(notification.isRead ? 0.02 : 0.04), radius: 6, y: 3)
         }
         .buttonStyle(.plain)

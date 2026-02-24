@@ -6,56 +6,116 @@ struct SurveysView: View {
     @State private var selectedSurvey: Survey?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: FemSpacing.xl) {
-                    if surveysVM.isLoading {
-                        ProgressView()
-                            .tint(FemColor.pink)
-                            .frame(maxWidth: .infinity, minHeight: 200)
-                    } else {
-                        if !surveysVM.openSurveys.isEmpty {
-                            VStack(alignment: .leading, spacing: FemSpacing.md) {
-                                Text("Open Surveys")
-                                    .font(FemFont.title(20))
-                                    .foregroundStyle(FemColor.darkBlue)
+        ScrollView {
+            VStack(spacing: FemSpacing.xl) {
+                surveyHeaderCard
 
-                                ForEach(surveysVM.openSurveys) { survey in
-                                    SurveyCard(survey: survey, isOpen: true) {
-                                        selectedSurvey = survey
-                                    }
+                if surveysVM.isLoading {
+                    ProgressView()
+                        .tint(FemColor.darkBlue)
+                        .frame(maxWidth: .infinity, minHeight: 200)
+                } else {
+                    if !surveysVM.openSurveys.isEmpty {
+                        VStack(alignment: .leading, spacing: FemSpacing.md) {
+                            Text("Ready for You")
+                                .font(FemFont.title(20))
+                                .foregroundStyle(FemColor.darkBlue)
+
+                            ForEach(surveysVM.openSurveys) { survey in
+                                SurveyCard(survey: survey, isOpen: true) {
+                                    selectedSurvey = survey
                                 }
                             }
-                        }
-
-                        if !surveysVM.completedSurveys.isEmpty {
-                            VStack(alignment: .leading, spacing: FemSpacing.md) {
-                                Text("Completed")
-                                    .font(FemFont.title(20))
-                                    .foregroundStyle(FemColor.darkBlue)
-
-                                ForEach(surveysVM.completedSurveys) { survey in
-                                    SurveyCard(survey: survey, isOpen: false) {}
-                                }
-                            }
-                        }
-
-                        if surveysVM.openSurveys.isEmpty && surveysVM.completedSurveys.isEmpty {
-                            ContentUnavailableView("No Surveys", systemImage: "doc.text", description: Text("Surveys will appear here when available."))
-                                .frame(minHeight: 300)
                         }
                     }
+
+                    if !surveysVM.completedSurveys.isEmpty {
+                        VStack(alignment: .leading, spacing: FemSpacing.md) {
+                            Text("Completed")
+                                .font(FemFont.title(20))
+                                .foregroundStyle(FemColor.darkBlue)
+
+                            ForEach(surveysVM.completedSurveys) { survey in
+                                SurveyCard(survey: survey, isOpen: false) {}
+                            }
+                        }
+                    }
+
+                    if surveysVM.openSurveys.isEmpty && surveysVM.completedSurveys.isEmpty {
+                        ContentUnavailableView(
+                            "No Surveys Yet",
+                            systemImage: "text.clipboard",
+                            description: Text("New surveys will appear here as soon as they are published.")
+                        )
+                        .frame(minHeight: 300)
+                    }
                 }
-                .padding(.horizontal, FemSpacing.lg)
-                .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
-            .navigationTitle("Surveys")
-            .task { await surveysVM.loadSurveys(hubId: appVM.selectedHubId) }
-            .sheet(item: $selectedSurvey) { survey in
-                SurveyDetailView(survey: survey, surveysVM: surveysVM)
+            .padding(.horizontal, FemSpacing.lg)
+            .padding(.bottom, FemSpacing.xxl)
+        }
+        .background(FemColor.ivory.ignoresSafeArea())
+        .task { await surveysVM.loadSurveys(hubId: appVM.selectedHubId) }
+        .sheet(item: $selectedSurvey) { survey in
+            SurveyDetailView(survey: survey, surveysVM: surveysVM)
+        }
+    }
+
+    private var surveyHeaderCard: some View {
+        VStack(alignment: .leading, spacing: FemSpacing.md) {
+            Text("Community Pulse")
+                .font(FemFont.title(24))
+                .foregroundStyle(FemColor.ivory)
+
+            Text("Short surveys keep femella programming sharp and relevant.")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(FemColor.ivory.opacity(0.88))
+
+            HStack(spacing: FemSpacing.sm) {
+                SurveyMetricPill(
+                    title: "Open",
+                    count: surveysVM.openSurveys.count,
+                    icon: "sparkles"
+                )
+                SurveyMetricPill(
+                    title: "Completed",
+                    count: surveysVM.completedSurveys.count,
+                    icon: "checkmark.circle.fill"
+                )
             }
         }
+        .padding(FemSpacing.lg)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(FemColor.heroGradient)
+        .clipShape(.rect(cornerRadius: 24))
+        .overlay(alignment: .topTrailing) {
+            CirclePattern(size: 104, opacity: 0.2)
+                .blendMode(.screen)
+                .offset(x: 26, y: -24)
+                .allowsHitTesting(false)
+        }
+    }
+}
+
+private struct SurveyMetricPill: View {
+    let title: String
+    let count: Int
+    let icon: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption.weight(.bold))
+            Text("\(count)")
+                .font(.subheadline.weight(.bold))
+            Text(title)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(FemColor.darkBlue)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(Color.white.opacity(0.9))
+        .clipShape(Capsule())
     }
 }
 
@@ -81,9 +141,15 @@ private struct SurveyCard: View {
 
                 if isOpen {
                     Button(action: action) {
-                        Text("Take")
-                            .femSecondaryButton()
+                        Label("Take now", systemImage: "sparkles")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(FemColor.ivory)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(FemColor.darkBlue)
+                            .clipShape(Capsule())
                     }
+                    .buttonStyle(.plain)
                 } else {
                     StatusBadge(text: "Done", color: FemColor.green)
                 }
@@ -99,7 +165,22 @@ private struct SurveyCard: View {
             }
         }
         .padding(FemSpacing.lg)
-        .femCard()
+        .background(
+            LinearGradient(
+                colors: [Color.white, FemColor.darkBlue.opacity(0.03)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(
+                    isOpen ? FemColor.darkBlue.opacity(0.12) : FemColor.green.opacity(0.25),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: FemColor.darkBlue.opacity(0.05), radius: 9, y: 4)
     }
 }
 

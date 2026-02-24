@@ -35,6 +35,7 @@ struct EventDetailView: View {
                 .padding(FemSpacing.lg)
             }
         }
+        .ignoresSafeArea(edges: .top)
         .background(FemColor.ivory.ignoresSafeArea())
         .navigationBarTitleDisplayMode(.inline)
         .alert("Deregister from Event", isPresented: $showDeregisterAlert) {
@@ -56,7 +57,7 @@ struct EventDetailView: View {
         Color(FemColor.ivory)
             .frame(height: 260)
             .overlay {
-                AsyncImage(url: event.heroImageURL) { phase in
+                CachedAsyncImage(url: event.heroImageURL) { phase in
                     if let image = phase.image {
                         image.resizable().aspectRatio(contentMode: .fill)
                     }

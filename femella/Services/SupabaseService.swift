@@ -30,6 +30,10 @@ final class SupabaseService {
     }
 
     func signOut() async throws {
+        if let token = UserDefaults.standard.string(forKey: "apnsDeviceToken") {
+            try? await removeDeviceToken(token)
+            UserDefaults.standard.removeObject(forKey: "apnsDeviceToken")
+        }
         try await client.auth.signOut()
     }
 
@@ -84,13 +88,13 @@ final class SupabaseService {
 
     func uploadAvatar(imageData: Data) async throws -> String {
         guard let userId = currentUserId else { throw NSError(domain: "", code: 0, userInfo: [NSLocalizedDescriptionKey: "Not authenticated"]) }
-        let path = "avatars/\(userId)/avatar.jpg"
+        let path = "avatars/\(userId.lowercased())/avatar.jpg"
 
-        // Upload (upsert: overwrite if exists)
+        // Upload (upsert: overwrite if exists, heavily cache for CDN)
         try await client.storage.from("images").upload(
             path,
             data: imageData,
-            options: .init(contentType: "image/jpeg", upsert: true)
+            options: .init(cacheControl: "31536000", contentType: "image/jpeg", upsert: true)
         )
 
         // Get the public URL
@@ -112,6 +116,15 @@ final class SupabaseService {
             .execute()
             .value
         return rows.first.map { $0.toUserProfile() }
+    }
+    
+    func fetchExploreProfiles() async throws -> [UserProfile] {
+        let rows: [ProfileRow] = try await client.from("profiles")
+            .select()
+            .eq("show_profile_to_members", value: true)
+            .execute()
+            .value
+        return rows.map { $0.toUserProfile() }.filter { $0.isProfileComplete }
     }
 
     func upsertProfile(_ profile: UserProfile) async throws {
@@ -289,6 +302,13 @@ struct ProfileRow: Codable {
     let homeHubId: String
     let avatarUrl: String?
     let showProfileToMembers: Bool
+    let linkedinUrl: String?
+    let birthday: String?
+    let funFacts: String?
+    let hobbies: String?
+    let likesSports: Bool?
+    let interestedInRunningClub: Bool?
+    let interestedInCyclingClub: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -303,7 +323,22 @@ struct ProfileRow: Codable {
         case homeHubId = "home_hub_id"
         case avatarUrl = "avatar_url"
         case showProfileToMembers = "show_profile_to_members"
+        case linkedinUrl = "linkedin_url"
+        case birthday
+        case funFacts = "fun_facts"
+        case hobbies
+        case likesSports = "likes_sports"
+        case interestedInRunningClub = "interested_in_running_club"
+        case interestedInCyclingClub = "interested_in_cycling_club"
     }
+    
+    // Formatter for Supabase "YYYY-MM-DD" Date columns.
+    private static let birthdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     func toUserProfile() -> UserProfile {
         UserProfile(
@@ -318,7 +353,14 @@ struct ProfileRow: Codable {
             jobTitle: jobTitle,
             homeHubId: homeHubId,
             avatarURL: avatarUrl.flatMap { URL(string: $0) },
-            showProfileToMembers: showProfileToMembers
+            showProfileToMembers: showProfileToMembers,
+            linkedinUrl: linkedinUrl,
+            birthday: birthday.flatMap { ProfileRow.birthdayFormatter.date(from: $0) },
+            funFacts: funFacts,
+            hobbies: hobbies,
+            likesSports: likesSports ?? false,
+            interestedInRunningClub: interestedInRunningClub ?? false,
+            interestedInCyclingClub: interestedInCyclingClub ?? false
         )
     }
 
@@ -335,7 +377,14 @@ struct ProfileRow: Codable {
             jobTitle: profile.jobTitle,
             homeHubId: profile.homeHubId,
             avatarUrl: profile.avatarURL?.absoluteString,
-            showProfileToMembers: profile.showProfileToMembers
+            showProfileToMembers: profile.showProfileToMembers,
+            linkedinUrl: profile.linkedinUrl,
+            birthday: profile.birthday.map { ProfileRow.birthdayFormatter.string(from: $0) },
+            funFacts: profile.funFacts,
+            hobbies: profile.hobbies,
+            likesSports: profile.likesSports,
+            interestedInRunningClub: profile.interestedInRunningClub,
+            interestedInCyclingClub: profile.interestedInCyclingClub
         )
     }
 }

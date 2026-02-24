@@ -33,6 +33,11 @@ enum FemColor {
         colors: [darkBlue, Color(hex: 0x2E4570)],
         startPoint: .topLeading, endPoint: .bottomTrailing
     )
+    static let ivoryBlueWash = LinearGradient(
+        colors: [ivory, darkBlue.opacity(0.03)],
+        startPoint: .top,
+        endPoint: .bottom
+    )
 }
 
 extension Color {
@@ -158,7 +163,7 @@ struct AvatarView: View {
             Color(FemColor.ivory)
                 .frame(width: size, height: size)
                 .overlay {
-                    AsyncImage(url: url) { phase in
+                    CachedAsyncImage(url: url) { phase in
                         if let image = phase.image {
                             image.resizable().aspectRatio(contentMode: .fill)
                         }

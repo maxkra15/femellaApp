@@ -25,7 +25,7 @@ struct EventsView: View {
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.bottom, FemSpacing.xxl)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .background(FemColor.ivoryBlueWash.ignoresSafeArea())
             .navigationTitle("Events")
             .searchable(text: $searchText, prompt: "Search events...")
             .onChange(of: searchText) { _, newValue in
@@ -38,6 +38,9 @@ struct EventsView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     hubPicker
                 }
+            }
+            .navigationDestination(for: Event.self) { event in
+                EventDetailView(event: event, eventsVM: eventsVM)
             }
         }
     }
@@ -111,9 +114,6 @@ private struct EventSection: View {
                 .buttonStyle(.plain)
             }
         }
-        .navigationDestination(for: Event.self) { event in
-            EventDetailView(event: event, eventsVM: eventsVM)
-        }
     }
 }
 
@@ -126,7 +126,7 @@ struct EventCard: View {
             Color(FemColor.ivory)
                 .frame(height: 160)
                 .overlay {
-                    AsyncImage(url: event.heroImageURL) { phase in
+                    CachedAsyncImage(url: event.heroImageURL) { phase in
                         if let image = phase.image {
                             image.resizable().aspectRatio(contentMode: .fill)
                         }
@@ -196,6 +196,10 @@ struct EventCard: View {
             .padding(FemSpacing.lg)
         }
         .femCard()
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(FemColor.darkBlue.opacity(0.06), lineWidth: 1)
+        )
     }
 
     private func categoryColor(_ cat: EventCategory) -> Color {

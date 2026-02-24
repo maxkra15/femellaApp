@@ -13,6 +13,7 @@ struct MyEventsView: View {
                     Text("Past").tag(1)
                 }
                 .pickerStyle(.segmented)
+                .tint(FemColor.darkBlue)
                 .padding(.horizontal, FemSpacing.lg)
                 .padding(.vertical, FemSpacing.sm)
 
@@ -43,7 +44,7 @@ struct MyEventsView: View {
                     EventDetailView(event: event, eventsVM: eventsVM)
                 }
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .background(FemColor.ivoryBlueWash.ignoresSafeArea())
             .navigationTitle("My Events")
         }
     }
@@ -58,7 +59,7 @@ private struct MyEventCard: View {
             Color(FemColor.ivory)
                 .frame(width: 80, height: 80)
                 .overlay {
-                    AsyncImage(url: event.heroImageURL) { phase in
+                    CachedAsyncImage(url: event.heroImageURL) { phase in
                         if let image = phase.image {
                             image.resizable().aspectRatio(contentMode: .fill)
                         }
@@ -93,6 +94,10 @@ private struct MyEventCard: View {
         }
         .padding(FemSpacing.md)
         .femCard()
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(FemColor.darkBlue.opacity(0.06), lineWidth: 1)
+        )
     }
 
     @ViewBuilder

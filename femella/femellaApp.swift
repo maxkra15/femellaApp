@@ -5,16 +5,24 @@ import UserNotifications
 struct femellaApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var appVM = AppViewModel()
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environment(appVM)
+                .preferredColorScheme(.light)
                 .onReceive(NotificationCenter.default.publisher(for: .deviceTokenReceived)) { notification in
                     if let token = notification.object as? String {
+                        UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
                         Task {
                             try? await SupabaseService.shared.upsertDeviceToken(token)
                         }
+                    }
+                }
+                .onChange(of: scenePhase) { _, newPhase in
+                    if newPhase == .active {
+                        UIApplication.shared.applicationIconBadgeNumber = 0
                     }
                 }
         }
@@ -26,6 +34,11 @@ struct femellaApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
+        
+        // Increase URLCache capacity to store images effectively (50MB memory, 500MB disk)
+        let cache = URLCache(memoryCapacity: 50 * 1024 * 1024, diskCapacity: 500 * 1024 * 1024, diskPath: "femella_image_cache")
+        URLCache.shared = cache
+        
         return true
     }
 

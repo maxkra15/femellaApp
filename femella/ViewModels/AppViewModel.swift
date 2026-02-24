@@ -83,7 +83,14 @@ class AppViewModel {
                 jobTitle: "",
                 homeHubId: "",
                 avatarURL: nil,
-                showProfileToMembers: true
+                showProfileToMembers: true,
+                linkedinUrl: nil,
+                birthday: nil,
+                funFacts: nil,
+                hobbies: nil,
+                likesSports: false,
+                interestedInRunningClub: false,
+                interestedInCyclingClub: false
             )
             authState = .profileIncomplete
         } catch {
@@ -205,7 +212,14 @@ class AppViewModel {
                         jobTitle: "",
                         homeHubId: "",
                         avatarURL: nil,
-                        showProfileToMembers: true
+                        showProfileToMembers: true,
+                        linkedinUrl: nil,
+                        birthday: nil,
+                        funFacts: nil,
+                        hobbies: nil,
+                        likesSports: false,
+                        interestedInRunningClub: false,
+                        interestedInCyclingClub: false
                     )
                 }
                 authState = .profileIncomplete
