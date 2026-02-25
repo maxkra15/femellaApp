@@ -9,8 +9,12 @@ struct EventDetailView: View {
     @State private var showDeregisterAlert: Bool = false
     @State private var mapRegion: MKCoordinateRegion?
 
+    private var displayedEvent: Event {
+        eventsVM.events.first(where: { $0.id == event.id }) ?? event
+    }
+
     private var registration: EventRegistration? {
-        eventsVM.registrationFor(eventId: event.id)
+        eventsVM.registrationFor(eventId: displayedEvent.id)
     }
 
     private var isRegistered: Bool {
@@ -26,7 +30,7 @@ struct EventDetailView: View {
                     headerSection
                     detailsSection
                     descriptionSection
-                    if event.registeredCount > 0 {
+                    if displayedEvent.registeredCount > 0 {
                         attendeesSection
                     }
                     mapSection
@@ -44,7 +48,7 @@ struct EventDetailView: View {
                 Task { await deregister() }
             }
         } message: {
-            Text("Are you sure you want to deregister from \"\(event.title)\"?")
+            Text("Are you sure you want to deregister from \"\(displayedEvent.title)\"?")
         }
         .task {
             await geocodeAddress()
@@ -57,7 +61,7 @@ struct EventDetailView: View {
         Color(FemColor.ivory)
             .frame(height: 260)
             .overlay {
-                CachedAsyncImage(url: event.heroImageURL) { phase in
+                CachedAsyncImage(url: displayedEvent.heroImageURL) { phase in
                     if let image = phase.image {
                         image.resizable().aspectRatio(contentMode: .fill)
                     }
@@ -74,7 +78,7 @@ struct EventDetailView: View {
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        Text(event.category.rawValue)
+                        Text(displayedEvent.category.rawValue)
                             .font(.caption.weight(.bold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 10)
@@ -82,8 +86,8 @@ struct EventDetailView: View {
                             .background(categoryColor.opacity(0.9))
                             .clipShape(Capsule())
 
-                        if !event.isFree {
-                            Text(event.priceDisplay)
+                        if !displayedEvent.isFree {
+                            Text(displayedEvent.priceDisplay)
                                 .font(.caption.weight(.bold))
                                 .foregroundStyle(.white)
                                 .padding(.horizontal, 10)
@@ -93,7 +97,7 @@ struct EventDetailView: View {
                         }
                     }
 
-                    Text(event.title)
+                    Text(displayedEvent.title)
                         .font(FemFont.display(24))
                         .foregroundStyle(.white)
                 }
@@ -105,8 +109,8 @@ struct EventDetailView: View {
 
     private var headerSection: some View {
         HStack {
-            if !event.hostName.isEmpty {
-                Label("Hosted by \(event.hostName)", systemImage: "person.circle.fill")
+            if !displayedEvent.hostName.isEmpty {
+                Label("Hosted by \(displayedEvent.hostName)", systemImage: "person.circle.fill")
                     .font(.subheadline)
                     .foregroundStyle(FemColor.darkBlue.opacity(0.6))
             }
@@ -127,7 +131,7 @@ struct EventDetailView: View {
             detailRow(
                 icon: "calendar",
                 color: FemColor.pink,
-                title: event.startsAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
+                title: displayedEvent.startsAt.formatted(.dateTime.weekday(.wide).month(.wide).day().year())
             )
 
             Divider().padding(.leading, 52)
@@ -135,7 +139,7 @@ struct EventDetailView: View {
             detailRow(
                 icon: "clock",
                 color: FemColor.lightBlue,
-                title: "\(event.startsAt.formatted(.dateTime.hour().minute())) – \(event.endsAt.formatted(.dateTime.hour().minute()))"
+                title: "\(displayedEvent.startsAt.formatted(.dateTime.hour().minute())) – \(displayedEvent.endsAt.formatted(.dateTime.hour().minute()))"
             )
 
             Divider().padding(.leading, 52)
@@ -143,8 +147,8 @@ struct EventDetailView: View {
             detailRow(
                 icon: "mappin.circle.fill",
                 color: FemColor.orangeRed,
-                title: event.locationName,
-                subtitle: event.address
+                title: displayedEvent.locationName,
+                subtitle: displayedEvent.address
             )
 
             Divider().padding(.leading, 52)
@@ -152,11 +156,11 @@ struct EventDetailView: View {
             detailRow(
                 icon: "person.2.fill",
                 color: FemColor.green,
-                title: "\(event.registeredCount)/\(event.capacity) registered",
-                subtitle: event.waitlistCount > 0 ? "\(event.waitlistCount) on waitlist" : nil
+                title: "\(displayedEvent.registeredCount)/\(displayedEvent.capacity) registered",
+                subtitle: displayedEvent.waitlistCount > 0 ? "\(displayedEvent.waitlistCount) on waitlist" : nil
             )
 
-            if event.isNonDeregisterable {
+            if displayedEvent.isNonDeregisterable {
                 Divider().padding(.leading, 52)
                 HStack(spacing: 12) {
                     Circle()
@@ -216,7 +220,7 @@ struct EventDetailView: View {
             Text("About")
                 .font(FemFont.title(18))
                 .foregroundStyle(FemColor.darkBlue)
-            Text(event.description)
+            Text(displayedEvent.description)
                 .font(.body)
                 .foregroundStyle(FemColor.darkBlue.opacity(0.7))
         }
@@ -231,7 +235,7 @@ struct EventDetailView: View {
                 .foregroundStyle(FemColor.darkBlue)
 
             HStack(spacing: -8) {
-                ForEach(0..<min(5, event.registeredCount), id: \.self) { i in
+                ForEach(0..<min(5, displayedEvent.registeredCount), id: \.self) { i in
                     Circle()
                         .fill(FemColor.pink.opacity(Double(5 - i) * 0.15 + 0.2))
                         .frame(width: 36, height: 36)
@@ -242,12 +246,12 @@ struct EventDetailView: View {
                         }
                         .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
                 }
-                if event.registeredCount > 5 {
+                if displayedEvent.registeredCount > 5 {
                     Circle()
                         .fill(FemColor.ivory)
                         .frame(width: 36, height: 36)
                         .overlay {
-                            Text("+\(event.registeredCount - 5)")
+                            Text("+\(displayedEvent.registeredCount - 5)")
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         }
@@ -267,7 +271,7 @@ struct EventDetailView: View {
 
             if let region = mapRegion {
                 Map(initialPosition: .region(region)) {
-                    Marker(event.locationName, coordinate: region.center)
+                    Marker(displayedEvent.locationName, coordinate: region.center)
                         .tint(FemColor.pink)
                 }
                 .frame(height: 180)
@@ -297,7 +301,7 @@ struct EventDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
                         .foregroundStyle(FemColor.pink)
-                    Text(event.address)
+                    Text(displayedEvent.address)
                         .font(.caption)
                         .foregroundStyle(FemColor.darkBlue.opacity(0.6))
                         .multilineTextAlignment(.leading)
@@ -314,10 +318,10 @@ struct EventDetailView: View {
 
     @ViewBuilder
     private var ctaButton: some View {
-        if event.isPast {
+        if displayedEvent.isPast {
             StatusBadge(text: "Event Ended", color: .secondary)
                 .frame(maxWidth: .infinity)
-        } else if isRegistered && !event.isNonDeregisterable {
+        } else if isRegistered && !displayedEvent.isNonDeregisterable {
             Button {
                 showDeregisterAlert = true
             } label: {
@@ -350,12 +354,12 @@ struct EventDetailView: View {
                 Group {
                     if isProcessing {
                         ProgressView().tint(.white)
-                    } else if event.isFull {
+                    } else if displayedEvent.isFull {
                         HStack {
                             Image(systemName: "list.bullet.clipboard")
                             Text("Join Waitlist")
                         }
-                    } else if event.isFree {
+                    } else if displayedEvent.isFree {
                         HStack {
                             Image(systemName: "checkmark.circle")
                             Text("Sign Up")
@@ -378,7 +382,7 @@ struct EventDetailView: View {
     // MARK: - Helpers
 
     private var categoryColor: Color {
-        switch event.category {
+        switch displayedEvent.category {
         case .connect: FemColor.pink
         case .learn: FemColor.lightBlue
         case .grow: FemColor.green
@@ -386,16 +390,16 @@ struct EventDetailView: View {
     }
 
     private func geocodeAddress() async {
-        let addressString = [event.locationName, event.address]
+        let addressString = [displayedEvent.locationName, displayedEvent.address]
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
 
         guard !addressString.isEmpty else { return }
 
         // If we already have valid coordinates from the database, use those
-        if event.latitude != 0 || event.longitude != 0 {
+        if displayedEvent.latitude != 0 || displayedEvent.longitude != 0 {
             mapRegion = MKCoordinateRegion(
-                center: CLLocationCoordinate2D(latitude: event.latitude, longitude: event.longitude),
+                center: CLLocationCoordinate2D(latitude: displayedEvent.latitude, longitude: displayedEvent.longitude),
                 span: MKCoordinateSpan(latitudeDelta: 0.008, longitudeDelta: 0.008)
             )
             return
@@ -425,7 +429,7 @@ struct EventDetailView: View {
     }
 
     private func openInMaps() {
-        let address = event.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let address = displayedEvent.address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         if let url = URL(string: "maps://?q=\(address)") {
             UIApplication.shared.open(url)
         }
@@ -433,13 +437,13 @@ struct EventDetailView: View {
 
     private func registerForEvent() async {
         isProcessing = true
-        await eventsVM.registerForEvent(event)
+        await eventsVM.registerForEvent(displayedEvent)
         isProcessing = false
     }
 
     private func deregister() async {
         isProcessing = true
-        await eventsVM.deregisterFromEvent(event)
+        await eventsVM.deregisterFromEvent(displayedEvent)
         isProcessing = false
     }
 }

@@ -102,13 +102,18 @@ class AppViewModel {
     func completeProfile(_ profile: UserProfile) async {
         authState = .loading
         do {
-            try await service.upsertProfile(profile)
-            currentUser = profile
-            if !profile.homeHubId.isEmpty {
-                selectedHubId = profile.homeHubId
+            var normalizedProfile = profile
+            if normalizedProfile.email.isEmpty, let authEmail = service.currentUserEmail, !authEmail.isEmpty {
+                normalizedProfile.email = authEmail
+            }
+
+            try await service.upsertProfile(normalizedProfile)
+            currentUser = normalizedProfile
+            if !normalizedProfile.homeHubId.isEmpty {
+                selectedHubId = normalizedProfile.homeHubId
             }
             // Check if they have an active membership
-            let mem = try await service.fetchMembership(userId: profile.id)
+            let mem = try await service.fetchMembership(userId: normalizedProfile.id)
             if let mem, mem.isActive {
                 membership = mem
                 authState = .authenticated
@@ -118,6 +123,34 @@ class AppViewModel {
         } catch {
             errorMessage = error.localizedDescription
             authState = .profileIncomplete
+        }
+    }
+
+    func updateAvatar(imageData: Data) async throws {
+        guard var user = currentUser else {
+            throw URLError(.userAuthenticationRequired)
+        }
+
+        let previousAvatarURL = user.avatarURL
+        let publicURL = try await service.uploadAvatar(imageData: imageData)
+        let cacheBuster = UUID().uuidString
+        guard let updatedAvatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)") else {
+            throw URLError(.badURL)
+        }
+
+        user.avatarURL = updatedAvatarURL
+        currentUser = user
+
+        ImageCacheManager.removeCachedImage(for: previousAvatarURL)
+        ImageCacheManager.removeCachedImage(for: updatedAvatarURL)
+
+        do {
+            try await service.upsertProfile(user)
+        } catch {
+            user.avatarURL = previousAvatarURL
+            currentUser = user
+            ImageCacheManager.removeCachedImage(for: updatedAvatarURL)
+            throw error
         }
     }
 
@@ -180,7 +213,18 @@ class AppViewModel {
 
     private func loadUserData(userId: String) async {
         do {
-            let profile = try await service.fetchProfile(userId: userId)
+            membership = nil
+
+            var profile = try await service.fetchProfile(userId: userId)
+            if var existingProfile = profile,
+               existingProfile.email.isEmpty,
+               let authEmail = service.currentUserEmail,
+               !authEmail.isEmpty {
+                existingProfile.email = authEmail
+                profile = existingProfile
+                try? await service.upsertProfile(existingProfile)
+            }
+
             currentUser = profile
 
             if let profile, profile.isProfileComplete {
@@ -204,7 +248,7 @@ class AppViewModel {
                         id: userId,
                         firstName: "",
                         lastName: "",
-                        email: "",
+                        email: service.currentUserEmail ?? "",
                         phone: "",
                         university: "",
                         degree: "",

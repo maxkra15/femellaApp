@@ -259,15 +259,7 @@ struct ProfileView: View {
             guard let uiImage = UIImage(data: data),
                   let jpeg = uiImage.jpegData(compressionQuality: 0.7) else { return }
 
-            let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
-
-            // Update the profile and bypass cache for the new image UI
-            if var user = appVM.currentUser {
-                let cacheBuster = UUID().uuidString
-                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
-                appVM.currentUser = user
-                try? await SupabaseService.shared.upsertProfile(user)
-            }
+            try await appVM.updateAvatar(imageData: jpeg)
         } catch {
             print("Avatar upload error: \(error)")
         }
@@ -484,7 +476,11 @@ struct EditProfileView: View {
         user.interestedInCyclingClub = interestedInCyclingClub
         appVM.currentUser = user
         Task {
-            try? await SupabaseService.shared.upsertProfile(user)
+            do {
+                try await SupabaseService.shared.upsertProfile(user)
+            } catch {
+                print("Profile save error: \(error)")
+            }
         }
     }
 
@@ -499,14 +495,7 @@ struct EditProfileView: View {
             guard let uiImage = UIImage(data: data),
                   let jpeg = uiImage.jpegData(compressionQuality: 0.7) else { return }
 
-            let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
-
-            if var user = appVM.currentUser {
-                let cacheBuster = UUID().uuidString
-                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
-                appVM.currentUser = user
-                try? await SupabaseService.shared.upsertProfile(user)
-            }
+            try await appVM.updateAvatar(imageData: jpeg)
         } catch {
             print("Avatar upload error: \(error)")
         }

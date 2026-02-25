@@ -287,14 +287,7 @@ struct ProfileCompletionView: View {
             guard let uiImage = UIImage(data: data),
                   let jpeg = uiImage.jpegData(compressionQuality: 0.7) else { return }
 
-            let publicURL = try await SupabaseService.shared.uploadAvatar(imageData: jpeg)
-
-            if var user = appVM.currentUser {
-                let cacheBuster = UUID().uuidString
-                user.avatarURL = URL(string: "\(publicURL)?v=\(cacheBuster)")
-                appVM.currentUser = user
-                try? await SupabaseService.shared.upsertProfile(user)
-            }
+            try await appVM.updateAvatar(imageData: jpeg)
         } catch {
             print("Avatar upload error: \(error)")
         }
@@ -365,8 +358,8 @@ struct ProfileCompletionView: View {
             company: company,
             jobTitle: jobTitle,
             homeHubId: selectedHubId,
-            avatarURL: nil,
-            showProfileToMembers: true,
+            avatarURL: user.avatarURL,
+            showProfileToMembers: user.showProfileToMembers,
             linkedinUrl: linkedinUrl.isEmpty ? nil : linkedinUrl,
             birthday: includeBirthday ? birthday : nil,
             funFacts: funFacts.isEmpty ? nil : funFacts,

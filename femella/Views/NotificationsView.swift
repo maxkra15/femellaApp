@@ -2,6 +2,14 @@ import SwiftUI
 
 struct NotificationsView: View {
     @Bindable var notificationsVM: NotificationsViewModel
+    @State private var isExpanded = false
+
+    private var displayedNotifications: [AppNotification] {
+        if isExpanded {
+            return notificationsVM.notifications
+        }
+        return Array(notificationsVM.notifications.prefix(5))
+    }
 
     var body: some View {
         NavigationStack {
@@ -11,10 +19,28 @@ struct NotificationsView: View {
                         ContentUnavailableView("No Notifications", systemImage: "bell.slash", description: Text("You're all caught up!"))
                             .frame(minHeight: 300)
                     } else {
-                        ForEach(notificationsVM.notifications) { notification in
+                        ForEach(displayedNotifications) { notification in
                             NotificationRow(notification: notification) {
                                 notificationsVM.markAsRead(notification)
                             }
+                        }
+
+                        if notificationsVM.notifications.count > 5 {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    isExpanded.toggle()
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Text(isExpanded ? "Collapse" : "Expand")
+                                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                        .font(.caption2.weight(.semibold))
+                                }
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(FemColor.darkBlue.opacity(0.7))
+                                .padding(.top, FemSpacing.xs)
+                            }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -77,7 +103,7 @@ private struct NotificationRow: View {
                         .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         .lineLimit(2)
 
-                    Text(notification.sentAt, style: .relative)
+                    Text(timeSinceText)
                         .font(.caption2)
                         .foregroundStyle(FemColor.darkBlue.opacity(0.3))
                 }
@@ -115,5 +141,18 @@ private struct NotificationRow: View {
         case .membership: FemColor.orangeRed
         case .registration: FemColor.green
         }
+    }
+
+    private var timeSinceText: String {
+        let elapsed = max(0, Date().timeIntervalSince(notification.sentAt))
+        if elapsed < 3600 {
+            return "Under 1h ago"
+        }
+        if elapsed < 86_400 {
+            let hours = Int(elapsed / 3600)
+            return "\(hours)h ago"
+        }
+        let days = Int(elapsed / 86_400)
+        return "\(days)d ago"
     }
 }

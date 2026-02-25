@@ -97,6 +97,7 @@ struct RootView: View {
                 requestPushPermission()
             }
         }
+        .dismissKeyboardOnTap()
     }
 
     private func requestPushPermission() {

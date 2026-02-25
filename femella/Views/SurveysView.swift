@@ -237,6 +237,7 @@ struct SurveyDetailView: View {
                 }
             }
         }
+        .dismissKeyboardOnTap()
     }
 
     private func submit() async {

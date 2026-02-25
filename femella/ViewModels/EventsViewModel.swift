@@ -8,6 +8,7 @@ class EventsViewModel {
     var isLoading: Bool = false
     var selectedCategory: EventCategory?
     var searchText: String = ""
+    private var inFlightEventMutations: Set<String> = []
 
     private let service = SupabaseService.shared
 
@@ -82,55 +83,55 @@ class EventsViewModel {
 
     func registerForEvent(_ event: Event) async {
         guard let userId = service.currentUserId else { return }
-        let status: String = event.isFull ? "waitlisted" : "registered"
+        guard registrationFor(eventId: event.id) == nil else { return }
+        guard !inFlightEventMutations.contains(event.id) else { return }
+        inFlightEventMutations.insert(event.id)
+        defer { inFlightEventMutations.remove(event.id) }
+
+        let latestEvent = events.first(where: { $0.id == event.id }) ?? event
+        let status: String = latestEvent.isFull ? "waitlisted" : "registered"
         do {
             let reg = try await service.registerForEvent(
-                eventId: event.id,
+                eventId: latestEvent.id,
                 userId: userId,
                 status: status
             )
             registrations.append(reg)
-            // Update local count
-            if let idx = events.firstIndex(where: { $0.id == event.id }) {
-                let updated = events[idx]
-                let newEvent = Event(
-                    id: updated.id, hubId: updated.hubId, category: updated.category,
-                    title: updated.title, description: updated.description,
-                    heroImageURL: updated.heroImageURL, locationName: updated.locationName,
-                    address: updated.address, latitude: updated.latitude, longitude: updated.longitude,
-                    startsAt: updated.startsAt, endsAt: updated.endsAt,
-                    capacity: updated.capacity,
-                    registeredCount: event.isFull ? updated.registeredCount : updated.registeredCount + 1,
-                    waitlistCount: event.isFull ? updated.waitlistCount + 1 : updated.waitlistCount,
-                    status: updated.status, registrationOpensAt: updated.registrationOpensAt,
-                    registrationClosesAt: updated.registrationClosesAt,
-                    priceAmount: updated.priceAmount, currency: updated.currency,
-                    isNonDeregisterable: updated.isNonDeregisterable,
-                    deregistrationDeadlineHoursOverride: updated.deregistrationDeadlineHoursOverride,
-                    noShowFeeAmountOverride: updated.noShowFeeAmountOverride,
-                    hostName: updated.hostName, attendeeAvatarURLs: updated.attendeeAvatarURLs
-                )
-                events[idx] = newEvent
-            }
+            await refreshEventState(hubId: latestEvent.hubId, userId: userId)
         } catch {
             print("Register error: \(error)")
         }
     }
 
     func deregisterFromEvent(_ event: Event) async {
-        if let reg = registrations.first(where: { $0.eventId == event.id && $0.status != .canceled }) {
-            do {
-                try await service.deregisterFromEvent(registrationId: reg.id)
-                if let idx = registrations.firstIndex(where: { $0.id == reg.id }) {
-                    registrations[idx] = EventRegistration(
-                        id: reg.id, eventId: reg.eventId, userId: reg.userId,
-                        status: .canceled, registeredAt: reg.registeredAt,
-                        canceledAt: Date(), position: reg.position
-                    )
-                }
-            } catch {
-                print("Deregister error: \(error)")
+        guard let userId = service.currentUserId else { return }
+        guard !inFlightEventMutations.contains(event.id) else { return }
+        guard let reg = registrations.first(where: { $0.eventId == event.id && $0.status != .canceled }) else { return }
+
+        inFlightEventMutations.insert(event.id)
+        defer { inFlightEventMutations.remove(event.id) }
+
+        do {
+            try await service.deregisterFromEvent(registrationId: reg.id)
+            if let idx = registrations.firstIndex(where: { $0.id == reg.id }) {
+                registrations[idx] = EventRegistration(
+                    id: reg.id, eventId: reg.eventId, userId: reg.userId,
+                    status: .canceled, registeredAt: reg.registeredAt,
+                    canceledAt: Date(), position: reg.position
+                )
             }
+            await refreshEventState(hubId: event.hubId, userId: userId)
+        } catch {
+            print("Deregister error: \(error)")
+        }
+    }
+
+    private func refreshEventState(hubId: String, userId: String) async {
+        do {
+            events = try await service.fetchEvents(hubId: hubId)
+            registrations = try await service.fetchRegistrations(userId: userId)
+        } catch {
+            print("Failed to refresh event state: \(error)")
         }
     }
 }

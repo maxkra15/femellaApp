@@ -61,6 +61,10 @@ final class SupabaseService {
         client.auth.currentSession?.user.id.uuidString
     }
 
+    var currentUserEmail: String? {
+        client.auth.currentSession?.user.email
+    }
+
     // MARK: - Device Tokens (Push Notifications)
 
     func upsertDeviceToken(_ token: String) async throws {

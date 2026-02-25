@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Brand Colors (femella BI Design Dossier May 2024)
 
@@ -126,6 +127,17 @@ struct FemSecondaryButton: ViewModifier {
             .padding(.vertical, 10)
             .background(FemColor.darkBlue.opacity(0.08))
             .clipShape(Capsule())
+    }
+}
+
+private struct DismissKeyboardOnTapModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    UIApplication.shared.endEditing()
+                }
+            )
     }
 }
 
@@ -269,5 +281,15 @@ extension View {
 
     func femSecondaryButton() -> some View {
         modifier(FemSecondaryButton())
+    }
+
+    func dismissKeyboardOnTap() -> some View {
+        modifier(DismissKeyboardOnTapModifier())
+    }
+}
+
+extension UIApplication {
+    func endEditing() {
+        sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }

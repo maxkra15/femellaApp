@@ -16,7 +16,9 @@ class NotificationsViewModel {
         guard let userId = service.currentUserId else { return }
         isLoading = true
         do {
+            let cutoff = Date().addingTimeInterval(-7 * 24 * 60 * 60)
             notifications = try await service.fetchNotifications(userId: userId)
+            notifications = notifications.filter { $0.sentAt >= cutoff }
         } catch {
             print("Failed to load notifications: \(error)")
         }
