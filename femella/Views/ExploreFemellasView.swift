@@ -9,6 +9,7 @@ private struct HubCluster: Identifiable {
 struct ExploreFemellasView: View {
     @Environment(AppViewModel.self) private var appVM
     @State private var vm = ExploreViewModel()
+    @Namespace private var memberTransition
 
     private var activeHubs: [Hub] {
         appVM.hubs.filter(\.isActive).sorted { $0.name < $1.name }
@@ -51,16 +52,17 @@ struct ExploreFemellasView: View {
 
             ScrollView {
                 if vm.isLoading {
-                    ProgressView()
-                        .padding(.top, 40)
-                        .tint(FemColor.darkBlue)
+                    loadingSkeleton
                 } else if visibleClusters.isEmpty {
                     ContentUnavailableView("No Femellas Found", systemImage: "person.2.slash")
                         .frame(minHeight: 220)
                 } else {
                     VStack(alignment: .leading, spacing: FemSpacing.lg) {
                         ForEach(visibleClusters) { cluster in
-                            HubBubbleCluster(cluster: cluster)
+                            HubBubbleCluster(
+                                cluster: cluster,
+                                transitionNamespace: memberTransition
+                            )
                         }
                     }
                     .padding(.horizontal)
@@ -68,7 +70,7 @@ struct ExploreFemellasView: View {
                 }
             }
         }
-        .background(FemColor.ivory.ignoresSafeArea())
+        .femAmbientBackground()
         .task {
             await vm.loadProfiles()
         }
@@ -85,16 +87,17 @@ struct ExploreFemellasView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(FemColor.darkBlue.opacity(0.55))
             TextField("Search", text: $vm.searchText)
+                .font(FemFont.body(15))
                 .textInputAutocapitalization(.never)
         }
         .padding(12)
-        .background(Color.white.opacity(0.96))
+        .background(Color.white.opacity(0.82))
         .clipShape(.rect(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(FemColor.darkBlue.opacity(0.12), lineWidth: 1)
+                .strokeBorder(FemColor.darkBlue.opacity(0.1), lineWidth: 1)
         )
-        .shadow(color: FemColor.darkBlue.opacity(0.05), radius: 8, y: 4)
+        .shadow(color: FemColor.darkBlue.opacity(0.08), radius: 10, y: 5)
         .padding(.horizontal)
         .padding(.vertical, 8)
     }
@@ -117,23 +120,51 @@ struct ExploreFemellasView: View {
         }
         .scrollIndicators(.hidden)
     }
+
+    private var loadingSkeleton: some View {
+        VStack(alignment: .leading, spacing: FemSpacing.lg) {
+            ForEach(0..<3, id: \.self) { _ in
+                VStack(alignment: .leading, spacing: FemSpacing.sm) {
+                    SkeletonBlock(width: 120, height: 12, cornerRadius: 6)
+                    HStack(spacing: 10) {
+                        ForEach(0..<4, id: \.self) { _ in
+                            VStack(spacing: 8) {
+                                SkeletonCircle(size: 74)
+                                SkeletonBlock(width: 64, height: 10, cornerRadius: 5)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.top, FemSpacing.md)
+    }
 }
 
 private struct HubBubbleCluster: View {
     let cluster: HubCluster
+    let transitionNamespace: Namespace.ID
 
     var body: some View {
         VStack(alignment: .leading, spacing: FemSpacing.sm) {
             Text(cluster.title)
-                .font(.caption.weight(.semibold))
+                .font(FemFont.caption(weight: .semibold))
                 .foregroundStyle(FemColor.darkBlue.opacity(0.6))
 
             BubbleFlowLayout(spacing: 8, rowSpacing: 12) {
                 ForEach(Array(cluster.profiles.enumerated()), id: \.element.id) { index, profile in
                     NavigationLink {
-                        ExploreMemberDetailView(profile: profile)
+                        ExploreMemberDetailView(
+                            profile: profile,
+                            transitionNamespace: transitionNamespace
+                        )
                     } label: {
-                        MemberOrb(profile: profile, seed: index)
+                        MemberOrb(
+                            profile: profile,
+                            seed: index,
+                            transitionNamespace: transitionNamespace
+                        )
                     }
                     .buttonStyle(.plain)
                 }
@@ -146,6 +177,7 @@ private struct HubBubbleCluster: View {
 private struct MemberOrb: View {
     let profile: UserProfile
     let seed: Int
+    let transitionNamespace: Namespace.ID
 
     @State private var isFloating = false
 
@@ -160,9 +192,10 @@ private struct MemberOrb: View {
                         .strokeBorder(FemColor.darkBlue.opacity(0.16), lineWidth: 1)
                 )
                 .shadow(color: FemColor.darkBlue.opacity(0.12), radius: 8, y: 4)
+                .matchedTransitionSource(id: profile.id, in: transitionNamespace)
 
             Text(profile.firstName)
-                .font(.caption.weight(.semibold))
+                .font(FemFont.caption(12, weight: .semibold))
                 .foregroundStyle(FemColor.darkBlue)
                 .lineLimit(1)
         }
@@ -189,14 +222,17 @@ private struct HubChip: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.subheadline.weight(.semibold))
+                .font(FemFont.ui(14, weight: .semibold))
                 .foregroundStyle(isSelected ? FemColor.ivory : FemColor.darkBlue.opacity(0.75))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .background(isSelected ? FemColor.darkBlue : FemColor.darkBlue.opacity(0.08))
+                .background(isSelected ? FemColor.darkBlue : Color.white.opacity(0.64))
                 .overlay(
                     Capsule()
-                        .strokeBorder(isSelected ? FemColor.pink.opacity(0.45) : Color.clear, lineWidth: 1)
+                        .strokeBorder(
+                            isSelected ? FemColor.pink.opacity(0.45) : FemColor.darkBlue.opacity(0.08),
+                            lineWidth: 1
+                        )
                 )
                 .clipShape(Capsule())
         }

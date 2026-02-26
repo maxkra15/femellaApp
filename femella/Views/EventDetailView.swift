@@ -5,6 +5,7 @@ import CoreLocation
 struct EventDetailView: View {
     let event: Event
     let eventsVM: EventsViewModel
+    var transitionNamespace: Namespace.ID? = nil
     @State private var isProcessing: Bool = false
     @State private var showDeregisterAlert: Bool = false
     @State private var mapRegion: MKCoordinateRegion?
@@ -22,6 +23,17 @@ struct EventDetailView: View {
     }
 
     var body: some View {
+        Group {
+            if let transitionNamespace {
+                mainContent
+                    .navigationTransition(.zoom(sourceID: displayedEvent.id, in: transitionNamespace))
+            } else {
+                mainContent
+            }
+        }
+    }
+
+    private var mainContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 heroImage
@@ -40,7 +52,7 @@ struct EventDetailView: View {
             }
         }
         .ignoresSafeArea(edges: .top)
-        .background(FemColor.ivory.ignoresSafeArea())
+        .femAmbientBackground()
         .navigationBarTitleDisplayMode(.inline)
         .alert("Deregister from Event", isPresented: $showDeregisterAlert) {
             Button("Cancel", role: .cancel) {}
@@ -111,14 +123,16 @@ struct EventDetailView: View {
         HStack {
             if !displayedEvent.hostName.isEmpty {
                 Label("Hosted by \(displayedEvent.hostName)", systemImage: "person.circle.fill")
-                    .font(.subheadline)
+                    .font(FemFont.body(14, weight: .medium))
                     .foregroundStyle(FemColor.darkBlue.opacity(0.6))
             }
             Spacer()
             if isRegistered {
                 StatusBadge(
                     text: registration?.status == .waitlisted ? "Waitlisted" : "Registered",
-                    color: registration?.status == .waitlisted ? FemColor.orangeRed : FemColor.green
+                    color: registration?.status == .waitlisted ? FemColor.orangeRed : FemColor.green,
+                    icon: registration?.status == .waitlisted ? "list.bullet.clipboard.fill" : "checkmark.seal.fill",
+                    emphasis: .solid
                 )
             }
         }
@@ -173,7 +187,7 @@ struct EventDetailView: View {
                         }
 
                     Text("Non-deregisterable event")
-                        .font(.subheadline)
+                        .font(FemFont.body(14, weight: .medium))
                         .foregroundStyle(FemColor.orangeRed)
                 }
                 .padding(.vertical, FemSpacing.sm)
@@ -203,7 +217,7 @@ struct EventDetailView: View {
 
                 if let subtitle, !subtitle.isEmpty {
                     Text(subtitle)
-                        .font(.caption)
+                        .font(FemFont.caption())
                         .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                 }
             }
@@ -221,7 +235,7 @@ struct EventDetailView: View {
                 .font(FemFont.title(18))
                 .foregroundStyle(FemColor.darkBlue)
             Text(displayedEvent.description)
-                .font(.body)
+                .font(FemFont.body(16))
                 .foregroundStyle(FemColor.darkBlue.opacity(0.7))
         }
     }
@@ -283,14 +297,7 @@ struct EventDetailView: View {
                     .fill(FemColor.cardBackground)
                     .frame(height: 180)
                     .overlay {
-                        VStack(spacing: 8) {
-                            Image(systemName: "map")
-                                .font(.title)
-                                .foregroundStyle(FemColor.darkBlue.opacity(0.2))
-                            Text("Loading map...")
-                                .font(.caption)
-                                .foregroundStyle(FemColor.darkBlue.opacity(0.3))
-                        }
+                        SkeletonBlock(height: 180, cornerRadius: 20)
                     }
             }
 
@@ -319,7 +326,7 @@ struct EventDetailView: View {
     @ViewBuilder
     private var ctaButton: some View {
         if displayedEvent.isPast {
-            StatusBadge(text: "Event Ended", color: .secondary)
+            StatusBadge(text: "Event Ended", color: .secondary, icon: "clock.arrow.circlepath")
                 .frame(maxWidth: .infinity)
         } else if isRegistered && !displayedEvent.isNonDeregisterable {
             Button {
@@ -329,7 +336,7 @@ struct EventDetailView: View {
                     Image(systemName: "xmark.circle")
                     Text("Deregister")
                 }
-                .font(.headline)
+                .font(FemFont.ui(16, weight: .semibold))
                 .foregroundStyle(FemColor.orangeRed)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
@@ -341,7 +348,7 @@ struct EventDetailView: View {
                 Image(systemName: "checkmark.circle.fill")
                 Text("You're registered!")
             }
-            .font(.headline)
+            .font(FemFont.ui(16, weight: .semibold))
             .foregroundStyle(FemColor.green)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)

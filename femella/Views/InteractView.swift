@@ -45,7 +45,7 @@ struct InteractView: View {
             }
             .navigationTitle("Interact")
             .navigationBarTitleDisplayMode(.inline)
-            .background(FemColor.ivory.ignoresSafeArea())
+            .femAmbientBackground()
         }
     }
 
@@ -59,9 +59,9 @@ struct InteractView: View {
                 } label: {
                     HStack(spacing: 6) {
                         Image(systemName: tab.icon)
-                            .font(.caption.weight(.semibold))
+                            .font(FemFont.caption(weight: .semibold))
                         Text(tab.title)
-                            .font(.subheadline.weight(.semibold))
+                            .font(FemFont.ui(15, weight: .semibold))
                             .lineLimit(1)
                     }
                     .foregroundStyle(activeTab == tab ? FemColor.ivory : FemColor.darkBlue.opacity(0.7))
@@ -84,8 +84,12 @@ struct InteractView: View {
             }
         }
         .padding(4)
-        .background(FemColor.darkBlue.opacity(0.08))
+        .background(Color.white.opacity(0.64))
         .clipShape(Capsule())
+        .overlay(
+            Capsule()
+                .strokeBorder(FemColor.darkBlue.opacity(0.08), lineWidth: 1)
+        )
         .padding(.horizontal)
         .padding(.top, FemSpacing.sm)
         .padding(.bottom, FemSpacing.sm)

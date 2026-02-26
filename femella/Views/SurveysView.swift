@@ -11,15 +11,16 @@ struct SurveysView: View {
                 surveyHeaderCard
 
                 if surveysVM.isLoading {
-                    ProgressView()
-                        .tint(FemColor.darkBlue)
-                        .frame(maxWidth: .infinity, minHeight: 200)
+                    loadingSkeleton
                 } else {
                     if !surveysVM.openSurveys.isEmpty {
                         VStack(alignment: .leading, spacing: FemSpacing.md) {
-                            Text("Ready for You")
-                                .font(FemFont.title(20))
-                                .foregroundStyle(FemColor.darkBlue)
+                            sectionTitle(
+                                title: "Ready for You",
+                                count: surveysVM.openSurveys.count,
+                                icon: "sparkles",
+                                color: FemColor.pink
+                            )
 
                             ForEach(surveysVM.openSurveys) { survey in
                                 SurveyCard(survey: survey, isOpen: true) {
@@ -31,9 +32,12 @@ struct SurveysView: View {
 
                     if !surveysVM.completedSurveys.isEmpty {
                         VStack(alignment: .leading, spacing: FemSpacing.md) {
-                            Text("Completed")
-                                .font(FemFont.title(20))
-                                .foregroundStyle(FemColor.darkBlue)
+                            sectionTitle(
+                                title: "Completed",
+                                count: surveysVM.completedSurveys.count,
+                                icon: "checkmark.seal.fill",
+                                color: FemColor.green
+                            )
 
                             ForEach(surveysVM.completedSurveys) { survey in
                                 SurveyCard(survey: survey, isOpen: false) {}
@@ -54,10 +58,32 @@ struct SurveysView: View {
             .padding(.horizontal, FemSpacing.lg)
             .padding(.bottom, FemSpacing.xxl)
         }
-        .background(FemColor.ivory.ignoresSafeArea())
+        .femAmbientBackground()
         .task { await surveysVM.loadSurveys(hubId: appVM.selectedHubId) }
         .sheet(item: $selectedSurvey) { survey in
             SurveyDetailView(survey: survey, surveysVM: surveysVM)
+        }
+    }
+
+    private var loadingSkeleton: some View {
+        VStack(spacing: FemSpacing.md) {
+            ForEach(0..<3, id: \.self) { _ in
+                SurveyCardSkeleton()
+            }
+        }
+    }
+
+    private func sectionTitle(title: String, count: Int, icon: String, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(title)
+                .font(FemFont.title(20))
+                .foregroundStyle(FemColor.darkBlue)
+
+            StatusBadge(
+                text: "\(count)",
+                color: color,
+                icon: icon
+            )
         }
     }
 
@@ -68,7 +94,7 @@ struct SurveysView: View {
                 .foregroundStyle(FemColor.ivory)
 
             Text("Short surveys keep femella programming sharp and relevant.")
-                .font(.subheadline.weight(.medium))
+                .font(FemFont.body(15, weight: .medium))
                 .foregroundStyle(FemColor.ivory.opacity(0.88))
 
             HStack(spacing: FemSpacing.sm) {
@@ -105,11 +131,11 @@ private struct SurveyMetricPill: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.caption.weight(.bold))
+                .font(FemFont.caption(weight: .bold))
             Text("\(count)")
-                .font(.subheadline.weight(.bold))
+                .font(FemFont.ui(15, weight: .bold))
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(FemFont.caption(weight: .semibold))
         }
         .foregroundStyle(FemColor.darkBlue)
         .padding(.horizontal, 12)
@@ -129,10 +155,10 @@ private struct SurveyCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(survey.title)
-                        .font(.headline)
+                        .font(FemFont.title(19))
                         .foregroundStyle(FemColor.darkBlue)
                     Text(survey.description)
-                        .font(.caption)
+                        .font(FemFont.caption(13, weight: .regular))
                         .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                         .lineLimit(2)
                 }
@@ -142,7 +168,7 @@ private struct SurveyCard: View {
                 if isOpen {
                     Button(action: action) {
                         Label("Take now", systemImage: "sparkles")
-                            .font(.subheadline.weight(.semibold))
+                            .font(FemFont.ui(14, weight: .semibold))
                             .foregroundStyle(FemColor.ivory)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
@@ -151,7 +177,7 @@ private struct SurveyCard: View {
                     }
                     .buttonStyle(.plain)
                 } else {
-                    StatusBadge(text: "Done", color: FemColor.green)
+                    StatusBadge(text: "Done", color: FemColor.green, icon: "checkmark.seal.fill")
                 }
             }
 
@@ -160,7 +186,7 @@ private struct SurveyCard: View {
                     Image(systemName: "clock")
                     Text(isOpen ? "Closes \(closes.formatted(.dateTime.month(.abbreviated).day()))" : "Closed \(closes.formatted(.dateTime.month(.abbreviated).day()))")
                 }
-                .font(.caption2)
+                .font(FemFont.caption(11, weight: .medium))
                 .foregroundStyle(FemColor.darkBlue.opacity(0.3))
             }
         }
@@ -184,6 +210,31 @@ private struct SurveyCard: View {
     }
 }
 
+private struct SurveyCardSkeleton: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    SkeletonBlock(height: 20, cornerRadius: 8)
+                    SkeletonBlock(height: 12, cornerRadius: 6)
+                    SkeletonBlock(width: 170, height: 12, cornerRadius: 6)
+                }
+                Spacer()
+                SkeletonBlock(width: 82, height: 32, cornerRadius: 16)
+            }
+
+            SkeletonBlock(width: 136, height: 10, cornerRadius: 5)
+        }
+        .padding(FemSpacing.lg)
+        .background(Color.white.opacity(0.74))
+        .clipShape(.rect(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(FemColor.darkBlue.opacity(0.1), lineWidth: 1)
+        )
+    }
+}
+
 struct SurveyDetailView: View {
     let survey: Survey
     let surveysVM: SurveysViewModel
@@ -200,7 +251,7 @@ struct SurveyDetailView: View {
                             .font(FemFont.display(22))
                             .foregroundStyle(FemColor.darkBlue)
                         Text(survey.description)
-                            .font(.subheadline)
+                            .font(FemFont.body(15))
                             .foregroundStyle(FemColor.darkBlue.opacity(0.5))
                     }
 
@@ -227,7 +278,7 @@ struct SurveyDetailView: View {
                 }
                 .padding(FemSpacing.lg)
             }
-            .background(FemColor.ivory.ignoresSafeArea())
+            .femAmbientBackground()
             .navigationTitle("Survey")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -255,7 +306,7 @@ private struct QuestionView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: FemSpacing.md) {
             Text(question.prompt)
-                .font(.subheadline.weight(.medium))
+                .font(FemFont.body(15, weight: .medium))
                 .foregroundStyle(FemColor.darkBlue)
 
             switch question.type {
@@ -283,7 +334,7 @@ private struct QuestionView: View {
                                     .foregroundStyle(FemColor.darkBlue)
                                 Spacer()
                             }
-                            .font(.subheadline)
+                            .font(FemFont.body(15))
                             .padding(12)
                             .background(answer == option ? FemColor.pink.opacity(0.06) : FemColor.ivory)
                             .clipShape(.rect(cornerRadius: 12))
