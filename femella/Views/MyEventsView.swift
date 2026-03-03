@@ -113,7 +113,7 @@ private struct MyEventCard: View {
             case .noShow:
                 StatusBadge(text: "No Show", color: FemColor.orangeRed)
             case .canceled:
-                StatusBadge(text: "Cancelled", color: .secondary)
+                StatusBadge(text: "Cancelled", color: FemColor.darkBlue.opacity(0.45))
             }
         }
     }

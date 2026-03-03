@@ -5,6 +5,7 @@ import SwiftUI
 class EventsViewModel {
     var events: [Event] = []
     var registrations: [EventRegistration] = []
+    private var participantCache: [String: [UserProfile]] = [:]
     var isLoading: Bool = false
     var selectedCategory: EventCategory?
     var searchText: String = ""
@@ -97,6 +98,7 @@ class EventsViewModel {
                 status: status
             )
             registrations.append(reg)
+            participantCache[latestEvent.id] = nil
             await refreshEventState(hubId: latestEvent.hubId, userId: userId)
         } catch {
             print("Register error: \(error)")
@@ -120,9 +122,25 @@ class EventsViewModel {
                     canceledAt: Date(), position: reg.position
                 )
             }
+            participantCache[event.id] = nil
             await refreshEventState(hubId: event.hubId, userId: userId)
         } catch {
             print("Deregister error: \(error)")
+        }
+    }
+
+    func loadParticipants(eventId: String, forceRefresh: Bool = false) async -> [UserProfile] {
+        if !forceRefresh, let cached = participantCache[eventId] {
+            return cached
+        }
+
+        do {
+            let participants = try await service.fetchEventParticipants(eventId: eventId)
+            participantCache[eventId] = participants
+            return participants
+        } catch {
+            print("Failed to load event participants: \(error)")
+            return participantCache[eventId] ?? []
         }
     }
 

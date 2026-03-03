@@ -203,6 +203,29 @@ final class SupabaseService {
         return rows.map { $0.toEventRegistration() }
     }
 
+    func fetchEventParticipants(eventId: String) async throws -> [UserProfile] {
+        let rows: [EventParticipantRow] = try await client.from("event_registrations")
+            .select("user_id,status,registered_at,profiles(*)")
+            .eq("event_id", value: eventId)
+            .order("registered_at")
+            .execute()
+            .value
+
+        let includedStatuses: Set<RegistrationStatus> = [.registered, .attended]
+        var seenUserIds = Set<String>()
+        var participants: [UserProfile] = []
+
+        for row in rows {
+            let status = RegistrationStatus(rawValue: row.status) ?? .registered
+            guard includedStatuses.contains(status) else { continue }
+            guard let profile = row.profiles.first?.toUserProfile() else { continue }
+            guard seenUserIds.insert(row.userId).inserted else { continue }
+            participants.append(profile)
+        }
+
+        return participants
+    }
+
     func registerForEvent(eventId: String, userId: String, status: String) async throws -> EventRegistration {
         let row = EventRegistrationInsert(
             eventId: eventId,
@@ -591,6 +614,35 @@ struct EventRegistrationRow: Codable {
             canceledAt: canceledAt,
             position: position
         )
+    }
+}
+
+struct EventParticipantRow: Codable {
+    let userId: String
+    let status: String
+    let registeredAt: Date
+    let profiles: [ProfileRow]
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case status
+        case registeredAt = "registered_at"
+        case profiles
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        userId = try container.decode(String.self, forKey: .userId)
+        status = try container.decode(String.self, forKey: .status)
+        registeredAt = try container.decode(Date.self, forKey: .registeredAt)
+
+        if let array = try? container.decode([ProfileRow].self, forKey: .profiles) {
+            profiles = array
+        } else if let single = try? container.decode(ProfileRow.self, forKey: .profiles) {
+            profiles = [single]
+        } else {
+            profiles = []
+        }
     }
 }
 

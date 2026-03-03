@@ -223,8 +223,18 @@ struct ProfileView: View {
                 .foregroundStyle(FemColor.darkBlue)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(FemColor.darkBlue.opacity(0.06))
+                .background(
+                    LinearGradient(
+                        colors: [FemColor.lightBlue.opacity(0.26), FemColor.ivory.opacity(0.95)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(FemColor.lightBlue.opacity(0.4), lineWidth: 1)
+                )
             }
 
             Button {
@@ -238,8 +248,18 @@ struct ProfileView: View {
                 .foregroundStyle(FemColor.orangeRed)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
-                .background(FemColor.orangeRed.opacity(0.06))
+                .background(
+                    LinearGradient(
+                        colors: [FemColor.orangeRed.opacity(0.14), FemColor.pink.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .strokeBorder(FemColor.orangeRed.opacity(0.32), lineWidth: 1)
+                )
             }
         }
     }

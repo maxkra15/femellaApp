@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import UIKit
 
 @main
 struct femellaApp: App {
@@ -34,11 +35,12 @@ struct femellaApp: App {
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         UNUserNotificationCenter.current().delegate = self
-        
+        configureTabBarAppearance()
+
         // Increase URLCache capacity to store images effectively (50MB memory, 500MB disk)
         let cache = URLCache(memoryCapacity: 50 * 1024 * 1024, diskCapacity: 500 * 1024 * 1024, diskPath: "femella_image_cache")
         URLCache.shared = cache
-        
+
         return true
     }
 
@@ -61,6 +63,31 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         // Could deep-link to specific content here in the future
         print("📱 Notification tapped: \(response.notification.request.content.title)")
+    }
+
+    private func configureTabBarAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterial)
+        appearance.backgroundColor = UIColor(FemColor.pureWhite).withAlphaComponent(0.72)
+
+        let normal = appearance.stackedLayoutAppearance.normal
+        normal.iconColor = UIColor(FemColor.richBlack).withAlphaComponent(0.9)
+        normal.titleTextAttributes = [.foregroundColor: UIColor(FemColor.richBlack).withAlphaComponent(0.9)]
+
+        let selected = appearance.stackedLayoutAppearance.selected
+        selected.iconColor = UIColor(FemColor.pink)
+        selected.titleTextAttributes = [.foregroundColor: UIColor(FemColor.pink)]
+
+        let badgeColor = UIColor(FemColor.orangeRed)
+        appearance.stackedLayoutAppearance.normal.badgeBackgroundColor = badgeColor
+        appearance.stackedLayoutAppearance.selected.badgeBackgroundColor = badgeColor
+
+        UITabBar.appearance().standardAppearance = appearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+        UITabBar.appearance().unselectedItemTintColor = UIColor(FemColor.richBlack).withAlphaComponent(0.9)
     }
 }
 

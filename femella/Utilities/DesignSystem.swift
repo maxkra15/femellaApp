@@ -13,6 +13,8 @@ enum FemColor {
     static let lightBlue = Color(hex: 0x6E97B4)
     static let orangeRed = Color(hex: 0xE8532D)
     static let ivory = Color(hex: 0xF5ECE5)
+    static let richBlack = Color(hex: 0x000000)
+    static let pureWhite = Color(hex: 0xFFFFFF)
 
     // Semantic aliases (keep backward compatibility)
     static let navy = darkBlue
@@ -22,7 +24,7 @@ enum FemColor {
     static let success = green
     static let danger = orangeRed
     static let blush = ivory
-    static let cardBackground = Color.white
+    static let cardBackground = pureWhite
     static let warmWhite = Color(hex: 0xFAF6F3)
     static let powderBlue = Color(hex: 0xEAF2FB)
     static let blushPink = Color(hex: 0xFCEFF3)
@@ -30,6 +32,11 @@ enum FemColor {
     // Gradients
     static let pinkGradient = LinearGradient(
         colors: [pink, Color(hex: 0xE0607E)],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+    static let coralGradient = LinearGradient(
+        colors: [pink, orangeRed],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
@@ -129,11 +136,17 @@ struct FemPrimaryButton: ViewModifier {
             .padding(.vertical, 16)
             .background(
                 isEnabled
-                    ? AnyShapeStyle(FemColor.pinkGradient)
-                    : AnyShapeStyle(FemColor.pink.opacity(0.35))
+                    ? AnyShapeStyle(FemColor.coralGradient)
+                    : AnyShapeStyle(
+                        LinearGradient(
+                            colors: [FemColor.pink.opacity(0.45), FemColor.lightBlue.opacity(0.4)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             )
             .clipShape(Capsule())
-            .shadow(color: FemColor.pink.opacity(isEnabled ? 0.3 : 0), radius: 8, y: 4)
+            .shadow(color: FemColor.orangeRed.opacity(isEnabled ? 0.28 : 0), radius: 10, y: 5)
     }
 }
 
@@ -144,8 +157,18 @@ struct FemSecondaryButton: ViewModifier {
             .foregroundStyle(FemColor.darkBlue)
             .padding(.horizontal, 20)
             .padding(.vertical, 10)
-            .background(FemColor.darkBlue.opacity(0.08))
+            .background(
+                LinearGradient(
+                    colors: [FemColor.lightBlue.opacity(0.24), FemColor.ivory.opacity(0.95)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            )
             .clipShape(Capsule())
+            .overlay(
+                Capsule()
+                    .strokeBorder(FemColor.lightBlue.opacity(0.35), lineWidth: 1)
+            )
     }
 }
 
@@ -218,19 +241,46 @@ struct CategoryChip: View {
     let isSelected: Bool
     let action: () -> Void
 
+    private var activeColor: Color {
+        switch title.lowercased() {
+        case "connect":
+            FemColor.pink
+        case "learn":
+            FemColor.lightBlue
+        case "grow":
+            FemColor.green
+        default:
+            FemColor.darkBlue
+        }
+    }
+
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(FemFont.ui(14, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : FemColor.darkBlue)
+                .foregroundStyle(isSelected ? FemColor.pureWhite : activeColor)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 9)
-                .background(isSelected ? FemColor.pink : FemColor.ivory.opacity(0.6))
+                .background(
+                    isSelected
+                        ? AnyShapeStyle(
+                            LinearGradient(
+                                colors: [activeColor, activeColor.opacity(0.82)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        : AnyShapeStyle(FemColor.pureWhite.opacity(0.62))
+                )
                 .clipShape(Capsule())
                 .overlay(
                     Capsule()
-                        .strokeBorder(isSelected ? Color.clear : FemColor.darkBlue.opacity(0.1), lineWidth: 1)
+                        .strokeBorder(
+                            isSelected ? activeColor.opacity(0.2) : activeColor.opacity(0.34),
+                            lineWidth: 1
+                        )
                 )
+                .shadow(color: activeColor.opacity(isSelected ? 0.22 : 0), radius: 8, y: 4)
         }
     }
 }
@@ -302,7 +352,7 @@ struct StatusBadge: View {
             Text(text)
                 .font(FemFont.caption(weight: .bold))
         }
-        .foregroundStyle(emphasis == .solid ? Color.white : color)
+        .foregroundStyle(emphasis == .solid ? FemColor.pureWhite : color)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
         .background(backgroundStyle)

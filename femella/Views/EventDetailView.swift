@@ -9,6 +9,9 @@ struct EventDetailView: View {
     @State private var isProcessing: Bool = false
     @State private var showDeregisterAlert: Bool = false
     @State private var mapRegion: MKCoordinateRegion?
+    @State private var participants: [UserProfile] = []
+    @State private var isLoadingParticipants: Bool = false
+    @Namespace private var participantTransition
 
     private var displayedEvent: Event {
         eventsVM.events.first(where: { $0.id == event.id }) ?? event
@@ -42,7 +45,7 @@ struct EventDetailView: View {
                     headerSection
                     detailsSection
                     descriptionSection
-                    if displayedEvent.registeredCount > 0 {
+                    if displayedEvent.registeredCount > 0 || !participants.isEmpty || isLoadingParticipants {
                         attendeesSection
                     }
                     mapSection
@@ -62,8 +65,9 @@ struct EventDetailView: View {
         } message: {
             Text("Are you sure you want to deregister from \"\(displayedEvent.title)\"?")
         }
-        .task {
+        .task(id: displayedEvent.id) {
             await geocodeAddress()
+            await loadParticipants()
         }
     }
 
@@ -244,33 +248,66 @@ struct EventDetailView: View {
 
     private var attendeesSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Attendees")
-                .font(FemFont.title(18))
-                .foregroundStyle(FemColor.darkBlue)
+            HStack {
+                Text("Attendees")
+                    .font(FemFont.title(18))
+                    .foregroundStyle(FemColor.darkBlue)
+                Spacer()
+                Text("\(displayedEvent.registeredCount) joining")
+                    .font(FemFont.caption(12, weight: .semibold))
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.45))
+            }
 
-            HStack(spacing: -8) {
-                ForEach(0..<min(5, displayedEvent.registeredCount), id: \.self) { i in
-                    Circle()
-                        .fill(FemColor.pink.opacity(Double(5 - i) * 0.15 + 0.2))
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            Text(String(Character(UnicodeScalar(65 + i % 26)!)))
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(FemColor.darkBlue)
-                        }
-                        .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
+            if isLoadingParticipants && participants.isEmpty {
+                HStack(spacing: -10) {
+                    ForEach(0..<6, id: \.self) { _ in
+                        SkeletonCircle(size: 42)
+                            .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
+                    }
                 }
-                if displayedEvent.registeredCount > 5 {
-                    Circle()
-                        .fill(FemColor.ivory)
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            Text("+\(displayedEvent.registeredCount - 5)")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(FemColor.darkBlue.opacity(0.5))
+            } else if participants.isEmpty {
+                Text("No participant profiles available yet.")
+                    .font(FemFont.caption(13, weight: .medium))
+                    .foregroundStyle(FemColor.darkBlue.opacity(0.5))
+            } else {
+                let visibleParticipants = Array(participants.prefix(20))
+                ScrollView(.horizontal) {
+                    HStack(spacing: -10) {
+                        ForEach(visibleParticipants, id: \.id) { profile in
+                            NavigationLink {
+                                ExploreMemberDetailView(
+                                    profile: profile,
+                                    transitionNamespace: participantTransition
+                                )
+                            } label: {
+                                AvatarView(
+                                    initials: profile.initials,
+                                    url: profile.avatarURL,
+                                    size: 42
+                                )
+                                .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
+                                .shadow(color: FemColor.darkBlue.opacity(0.12), radius: 6, y: 3)
+                                .matchedTransitionSource(id: profile.id, in: participantTransition)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(profile.fullName)
                         }
-                        .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
+
+                        if displayedEvent.registeredCount > visibleParticipants.count {
+                            Circle()
+                                .fill(FemColor.ivory)
+                                .frame(width: 42, height: 42)
+                                .overlay {
+                                    Text("+\(displayedEvent.registeredCount - visibleParticipants.count)")
+                                        .font(FemFont.caption(11, weight: .semibold))
+                                        .foregroundStyle(FemColor.darkBlue.opacity(0.6))
+                                }
+                                .overlay(Circle().stroke(FemColor.cardBackground, lineWidth: 2))
+                        }
+                    }
+                    .padding(.vertical, 2)
                 }
+                .scrollIndicators(.hidden)
             }
         }
     }
@@ -326,7 +363,7 @@ struct EventDetailView: View {
     @ViewBuilder
     private var ctaButton: some View {
         if displayedEvent.isPast {
-            StatusBadge(text: "Event Ended", color: .secondary, icon: "clock.arrow.circlepath")
+            StatusBadge(text: "Event Ended", color: FemColor.darkBlue.opacity(0.45), icon: "clock.arrow.circlepath")
                 .frame(maxWidth: .infinity)
         } else if isRegistered && !displayedEvent.isNonDeregisterable {
             Button {
@@ -445,12 +482,20 @@ struct EventDetailView: View {
     private func registerForEvent() async {
         isProcessing = true
         await eventsVM.registerForEvent(displayedEvent)
+        await loadParticipants(forceRefresh: true)
         isProcessing = false
     }
 
     private func deregister() async {
         isProcessing = true
         await eventsVM.deregisterFromEvent(displayedEvent)
+        await loadParticipants(forceRefresh: true)
         isProcessing = false
+    }
+
+    private func loadParticipants(forceRefresh: Bool = false) async {
+        isLoadingParticipants = true
+        participants = await eventsVM.loadParticipants(eventId: displayedEvent.id, forceRefresh: forceRefresh)
+        isLoadingParticipants = false
     }
 }
