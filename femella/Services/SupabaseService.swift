@@ -4,6 +4,7 @@ import Supabase
 @MainActor
 final class SupabaseService {
     static let shared = SupabaseService()
+    private static let apnsDeviceTokenKey = "apnsDeviceToken"
 
     let client: SupabaseClient
 
@@ -30,14 +31,24 @@ final class SupabaseService {
     }
 
     func signOut() async throws {
-        if let token = UserDefaults.standard.string(forKey: "apnsDeviceToken") {
-            try? await removeDeviceToken(token)
-            UserDefaults.standard.removeObject(forKey: "apnsDeviceToken")
+        if let token = cachedDeviceToken, let userId = currentUserId {
+            do {
+                try await removeDeviceToken(token, for: userId)
+            } catch {
+                print("❌ Failed to remove APNs token during sign out: \(error.localizedDescription)")
+            }
         }
         try await client.auth.signOut()
     }
 
     func deleteAccount() async throws {
+        if let token = cachedDeviceToken, let userId = currentUserId {
+            do {
+                try await removeDeviceToken(token, for: userId)
+            } catch {
+                print("❌ Failed to remove APNs token during account deletion: \(error.localizedDescription)")
+            }
+        }
         // Delete the profile (cascade will clean up related data)
         if let userId = currentUserId {
             try await client.from("profiles").delete().eq("id", value: userId).execute()
@@ -67,7 +78,24 @@ final class SupabaseService {
 
     // MARK: - Device Tokens (Push Notifications)
 
+    var cachedDeviceToken: String? {
+        UserDefaults.standard.string(forKey: Self.apnsDeviceTokenKey)
+    }
+
+    func cacheDeviceToken(_ token: String) {
+        guard !token.isEmpty else { return }
+        UserDefaults.standard.set(token, forKey: Self.apnsDeviceTokenKey)
+    }
+
+    @discardableResult
+    func syncCachedDeviceToken() async throws -> Bool {
+        guard let token = cachedDeviceToken else { return false }
+        try await upsertDeviceToken(token)
+        return true
+    }
+
     func upsertDeviceToken(_ token: String) async throws {
+        cacheDeviceToken(token)
         guard let userId = currentUserId else { return }
         struct TokenRow: Encodable {
             let user_id: String
@@ -79,11 +107,11 @@ final class SupabaseService {
             .execute()
     }
 
-    func removeDeviceToken(_ token: String) async throws {
-        guard let userId = currentUserId else { return }
+    func removeDeviceToken(_ token: String, for userId: String? = nil) async throws {
+        guard let ownerUserId = userId ?? currentUserId else { return }
         try await client.from("device_tokens")
             .delete()
-            .eq("user_id", value: userId)
+            .eq("user_id", value: ownerUserId)
             .eq("token", value: token)
             .execute()
     }
@@ -120,6 +148,16 @@ final class SupabaseService {
             .execute()
             .value
         return rows.first.map { $0.toUserProfile() }
+    }
+
+    func isUserBlocked(userId: String) async throws -> Bool {
+        let rows: [ProfileBlockRow] = try await client.from("profiles")
+            .select("is_blocked")
+            .eq("id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+        return rows.first?.isBlocked ?? false
     }
     
     func fetchExploreProfiles() async throws -> [UserProfile] {
@@ -413,6 +451,14 @@ struct ProfileRow: Codable {
             interestedInRunningClub: profile.interestedInRunningClub,
             interestedInCyclingClub: profile.interestedInCyclingClub
         )
+    }
+}
+
+private struct ProfileBlockRow: Codable {
+    let isBlocked: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case isBlocked = "is_blocked"
     }
 }
 

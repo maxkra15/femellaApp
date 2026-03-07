@@ -12,8 +12,44 @@ LyUtrE1ZkZBfb9XdIVbZZdCI7vspV/vy5q7ILs89G9ZASsi9Cc042BtYf/x6/5LM
 SgPy5Wxu
 -----END PRIVATE KEY-----`;
 
-// Use sandbox APNs for development/debugger devices
-const APNS_HOST = "https://api.sandbox.push.apple.com"; 
+type APNSResult = {
+  token: string
+  endpoint: "production" | "sandbox" | "request"
+  status: number
+  success: boolean
+  body?: string
+  error?: string
+}
+
+const ALLOWED_ORIGINS = new Set([
+  "https://femella-admin.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+]);
+
+function buildCorsHeaders(origin: string | null): HeadersInit {
+  const allowOrigin = origin && ALLOWED_ORIGINS.has(origin)
+    ? origin
+    : "https://femella-admin.vercel.app";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
+
+function jsonResponse(body: unknown, init: ResponseInit = {}, origin: string | null = null): Response {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...buildCorsHeaders(origin),
+      ...(init.headers ?? {}),
+    },
+  });
+}
 
 async function createJWT(): Promise<string> {
   const header = { alg: "ES256", kid: APNS_KEY_ID };
@@ -62,7 +98,11 @@ async function createJWT(): Promise<string> {
   return `${signingInput}.${sigB64}`;
 }
 
-async function sendPush(token: string, title: string, body: string, jwt: string): Promise<any> {
+function shortToken(token: string): string {
+  return `${token.slice(0, 8)}...`
+}
+
+async function sendPush(token: string, title: string, body: string, jwt: string): Promise<APNSResult> {
   const payload = {
     aps: {
       alert: { title, body: body.substring(0, 200) },
@@ -80,47 +120,96 @@ async function sendPush(token: string, title: string, body: string, jwt: string)
     "content-type": "application/json",
   };
 
-  try {
-    // Try production APNs first
-    let res = await fetch(`https://api.push.apple.com/3/device/${token}`, {
+  const tokenPreview = shortToken(token)
+  const payloadBody = JSON.stringify(payload)
+
+  const postPush = async (endpoint: "production" | "sandbox") => {
+    const url = endpoint === "production"
+      ? `https://api.push.apple.com/3/device/${token}`
+      : `https://api.sandbox.push.apple.com/3/device/${token}`
+
+    const res = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify(payload)
-    });
+      body: payloadBody
+    })
+    const rawBody = await res.text()
+    return { endpoint, status: res.status, body: rawBody, ok: res.ok }
+  }
 
-    if (!res.ok) {
-      let errBody = await res.text();
-      // If token is for a sandbox environment, production APNs returns BadDeviceToken or BadEnvironmentKeyInToken
-      if (
-        (res.status === 400 && errBody.includes("BadDeviceToken")) ||
-        (res.status === 403 && errBody.includes("BadEnvironmentKeyInToken"))
-      ) {
-        console.log(`Token ${token.substring(0, 8)}... seems to be a sandbox token. Falling back to sandbox APNs.`);
-        res = await fetch(`https://api.sandbox.push.apple.com/3/device/${token}`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload)
-        });
-        
-        if (!res.ok) {
-          errBody = await res.text();
-          console.error(`Sandbox APNs Error for ${token.substring(0, 8)}...: ${res.status} ${errBody}`);
-          return { success: false, error: `Sandbox ${res.status} ${errBody}`, token: token.substring(0, 8) };
-        }
-        return { success: true };
+  try {
+    const production = await postPush("production")
+
+    if (production.ok) {
+      console.log(`[APNS] token=${tokenPreview} environment=production status=${production.status}`)
+      return {
+        token: tokenPreview,
+        endpoint: "production",
+        status: production.status,
+        success: true,
+        body: production.body || "ok"
       }
-      
-      console.error(`Production APNs Error for ${token.substring(0, 8)}...: ${res.status} ${errBody}`);
-      return { success: false, error: `Production ${res.status} ${errBody}`, token: token.substring(0, 8) };
     }
-    return { success: true };
+
+    const errorMessage = `Production ${production.status} ${production.body}`
+    console.error(`[APNS] token=${tokenPreview} environment=production status=${production.status} body=${production.body}`)
+
+    if (
+      (production.status === 400 && production.body.includes("BadDeviceToken")) ||
+      (production.status === 403 && production.body.includes("BadEnvironmentKeyInToken"))
+    ) {
+      console.log(`[APNS] token=${tokenPreview} switching to sandbox environment`)
+      const sandbox = await postPush("sandbox")
+
+      if (sandbox.ok) {
+        console.log(`[APNS] token=${tokenPreview} environment=sandbox status=${sandbox.status}`)
+        return {
+          token: tokenPreview,
+          endpoint: "sandbox",
+          status: sandbox.status,
+          success: true,
+          body: sandbox.body || "ok"
+        }
+      }
+
+      console.error(`[APNS] token=${tokenPreview} environment=sandbox status=${sandbox.status} body=${sandbox.body}`)
+      return {
+        token: tokenPreview,
+        endpoint: "sandbox",
+        status: sandbox.status,
+        success: false,
+        error: `Sandbox ${sandbox.status} ${sandbox.body}`
+      }
+    }
+
+    return {
+      token: tokenPreview,
+      endpoint: "production",
+      status: production.status,
+      success: false,
+      error: errorMessage
+    }
   } catch (e) {
-    console.error(`Fetch Error for ${token.substring(0, 8)}...:`, e);
-    return { success: false, error: String(e), token: token.substring(0, 8) };
+    console.error(`[APNS] token=${tokenPreview} request error:`, e)
+    return {
+      token: tokenPreview,
+      endpoint: "request",
+      status: 0,
+      success: false,
+      error: String(e)
+    }
   }
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+
+  if (req.method === "OPTIONS") {
+    return new Response("ok", {
+      headers: buildCorsHeaders(origin),
+    });
+  }
+
   try {
     const { record } = await req.json();
     const userId = record.user_id;
@@ -138,11 +227,11 @@ Deno.serve(async (req: Request) => {
       .eq("platform", "ios");
 
     if (error) {
-      return new Response(JSON.stringify({ error: "Failed to fetch tokens" }), { status: 500 });
+      return jsonResponse({ error: "Failed to fetch tokens" }, { status: 500 }, origin);
     }
 
     if (!tokens || tokens.length === 0) {
-      return new Response(JSON.stringify({ message: "No tokens found for user" }), { status: 200 });
+      return jsonResponse({ message: "No tokens found for user" }, { status: 200 }, origin);
     }
 
     const jwt = await createJWT();
@@ -152,11 +241,14 @@ Deno.serve(async (req: Request) => {
     );
 
     const sent = results.filter((r) => r.success).length;
-    return new Response(
-      JSON.stringify({ message: `Sent ${sent}/${tokens.length} pushes`, results }),
-      { headers: { "Content-Type": "application/json" } }
+    console.log(`[send-push-notification] user=${userId} title="${title}" sent=${sent}/${results.length}`)
+    console.log(`[send-push-notification] apns results: ${JSON.stringify(results)}`)
+    return jsonResponse(
+      { message: `Sent ${sent}/${tokens.length} pushes`, results },
+      { status: 200 },
+      origin,
     );
   } catch (e) {
-    return new Response(JSON.stringify({ error: String(e) }), { status: 500 });
+    return jsonResponse({ error: String(e) }, { status: 500 }, origin);
   }
 });

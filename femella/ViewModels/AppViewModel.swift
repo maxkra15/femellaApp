@@ -213,9 +213,23 @@ class AppViewModel {
 
     private func loadUserData(userId: String) async {
         do {
+            errorMessage = nil
             membership = nil
+            async let profileTask = service.fetchProfile(userId: userId)
+            async let blockedTask = service.isUserBlocked(userId: userId)
 
-            var profile = try await service.fetchProfile(userId: userId)
+            let (blocked, fetchedProfile) = try await (blockedTask, profileTask)
+
+            if blocked {
+                try? await service.signOut()
+                currentUser = nil
+                membership = nil
+                errorMessage = "Your account has been blocked. Please contact Femella support."
+                authState = .unauthenticated
+                return
+            }
+
+            var profile = fetchedProfile
             if var existingProfile = profile,
                existingProfile.email.isEmpty,
                let authEmail = service.currentUserEmail,

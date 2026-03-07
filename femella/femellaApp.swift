@@ -15,19 +15,33 @@ struct femellaApp: App {
                 .preferredColorScheme(.light)
                 .onReceive(NotificationCenter.default.publisher(for: .deviceTokenReceived)) { notification in
                     if let token = notification.object as? String {
-                        UserDefaults.standard.set(token, forKey: "apnsDeviceToken")
-                        Task {
-                            try? await SupabaseService.shared.upsertDeviceToken(token)
-                        }
+                        SupabaseService.shared.cacheDeviceToken(token)
+                        syncDeviceToken(token, source: "apns callback")
                     }
                 }
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         UIApplication.shared.applicationIconBadgeNumber = 0
+                        if appVM.authState == .authenticated {
+                            refreshPushRegistrationIfNeeded()
+                            syncCachedPushToken(source: "app became active")
+                        }
                     }
                 }
         }
     }
+
+    private func syncDeviceToken(_ token: String, source: String) {
+        Task {
+            do {
+                try await SupabaseService.shared.upsertDeviceToken(token)
+                print("📱 Synced APNs token from \(source)")
+            } catch {
+                print("❌ Failed to sync APNs token from \(source): \(error.localizedDescription)")
+            }
+        }
+    }
+
 }
 
 // MARK: - AppDelegate for Push Notifications
@@ -95,6 +109,45 @@ extension Notification.Name {
     static let deviceTokenReceived = Notification.Name("deviceTokenReceived")
 }
 
+private func syncCachedPushToken(source: String, successPrefix: String = "📱 Synced cached APNs token from") {
+    Task {
+        do {
+            let synced = try await SupabaseService.shared.syncCachedDeviceToken()
+            if synced {
+                print("\(successPrefix) \(source)")
+            }
+        } catch {
+            print("❌ Failed to sync cached APNs token from \(source): \(error.localizedDescription)")
+        }
+    }
+}
+
+private func refreshPushRegistrationIfNeeded() {
+    UNUserNotificationCenter.current().getNotificationSettings { settings in
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            DispatchQueue.main.async {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        case .notDetermined:
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+                if granted {
+                    DispatchQueue.main.async {
+                        UIApplication.shared.registerForRemoteNotifications()
+                    }
+                }
+                if let error {
+                    print("Notification permission error: \(error)")
+                }
+            }
+        case .denied:
+            print("🔕 Push notifications are denied in system settings")
+        @unknown default:
+            break
+        }
+    }
+}
+
 // MARK: - Root View
 
 struct RootView: View {
@@ -121,23 +174,11 @@ struct RootView: View {
         }
         .onChange(of: appVM.authState) { _, newState in
             if newState == .authenticated {
-                requestPushPermission()
+                refreshPushRegistrationIfNeeded()
+                syncCachedPushToken(source: "authentication", successPrefix: "📱 Re-synced cached APNs token after")
             }
         }
         .dismissKeyboardOnTap()
-    }
-
-    private func requestPushPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            if granted {
-                DispatchQueue.main.async {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
-            }
-            if let error {
-                print("Notification permission error: \(error)")
-            }
-        }
     }
 }
 
