@@ -41,6 +41,14 @@ final class SupabaseService {
         try await client.auth.signOut()
     }
 
+    func clearLocalSession() async {
+        do {
+            try await client.auth.signOut(scope: .local)
+        } catch {
+            print("❌ Failed to clear local Supabase session: \(error.localizedDescription)")
+        }
+    }
+
     func deleteAccount() async throws {
         if let token = cachedDeviceToken, let userId = currentUserId {
             do {
@@ -60,11 +68,39 @@ final class SupabaseService {
         do {
             let session = try await client.auth.session
             if session.isExpired {
+                await clearLocalSession()
                 return nil
             }
-            return AuthUser(id: session.user.id.uuidString, email: session.user.email ?? "")
+
+            do {
+                let user = try await client.auth.user()
+                return AuthUser(id: user.id.uuidString, email: user.email ?? session.user.email ?? "")
+            } catch {
+                if shouldClearLocalSession(for: error) {
+                    await clearLocalSession()
+                    return nil
+                }
+
+                return AuthUser(id: session.user.id.uuidString, email: session.user.email ?? "")
+            }
         } catch {
+            if shouldClearLocalSession(for: error) {
+                await clearLocalSession()
+            }
             return nil
+        }
+    }
+
+    func shouldClearLocalSession(for error: Error) -> Bool {
+        guard let authError = error as? AuthError else { return false }
+
+        switch authError {
+        case .sessionMissing, .jwtVerificationFailed:
+            return true
+        case .api(_, _, _, let response):
+            return [401, 403, 404].contains(response.statusCode)
+        default:
+            return false
         }
     }
 

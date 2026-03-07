@@ -22,8 +22,8 @@ struct femellaApp: App {
                 .onChange(of: scenePhase) { _, newPhase in
                     if newPhase == .active {
                         UIApplication.shared.applicationIconBadgeNumber = 0
-                        if appVM.authState == .authenticated {
-                            refreshPushRegistrationIfNeeded()
+                        refreshPushRegistrationIfNeeded(promptIfNeeded: shouldMaintainPushRegistration(for: appVM.authState))
+                        if shouldMaintainPushRegistration(for: appVM.authState) {
                             syncCachedPushToken(source: "app became active")
                         }
                     }
@@ -122,7 +122,7 @@ private func syncCachedPushToken(source: String, successPrefix: String = "📱 S
     }
 }
 
-private func refreshPushRegistrationIfNeeded() {
+private func refreshPushRegistrationIfNeeded(promptIfNeeded: Bool = true) {
     UNUserNotificationCenter.current().getNotificationSettings { settings in
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
@@ -130,6 +130,7 @@ private func refreshPushRegistrationIfNeeded() {
                 UIApplication.shared.registerForRemoteNotifications()
             }
         case .notDetermined:
+            guard promptIfNeeded else { return }
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
                 if granted {
                     DispatchQueue.main.async {
@@ -145,6 +146,15 @@ private func refreshPushRegistrationIfNeeded() {
         @unknown default:
             break
         }
+    }
+}
+
+private func shouldMaintainPushRegistration(for authState: AuthState) -> Bool {
+    switch authState {
+    case .authenticated, .profileIncomplete, .paywalled:
+        return SupabaseService.shared.currentUserId != nil
+    case .loading, .unauthenticated:
+        return false
     }
 }
 
@@ -173,8 +183,8 @@ struct RootView: View {
             await appVM.restoreSession()
         }
         .onChange(of: appVM.authState) { _, newState in
-            if newState == .authenticated {
-                refreshPushRegistrationIfNeeded()
+            if shouldMaintainPushRegistration(for: newState) {
+                refreshPushRegistrationIfNeeded(promptIfNeeded: true)
                 syncCachedPushToken(source: "authentication", successPrefix: "📱 Re-synced cached APNs token after")
             }
         }

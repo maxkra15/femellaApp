@@ -32,6 +32,7 @@ class AppViewModel {
 
     func restoreSession() async {
         authState = .loading
+        let hadCachedSession = service.currentUserId != nil
         do {
             hubs = try await service.fetchHubs()
         } catch {
@@ -39,6 +40,11 @@ class AppViewModel {
         }
 
         guard let authUser = await service.restoreSession() else {
+            currentUser = nil
+            membership = nil
+            if hadCachedSession {
+                errorMessage = "Your saved session is no longer valid. Please sign in again."
+            }
             authState = .unauthenticated
             return
         }
@@ -211,6 +217,14 @@ class AppViewModel {
 
     // MARK: - Private
 
+    private func resetToUnauthenticated(message: String? = nil) async {
+        await service.clearLocalSession()
+        currentUser = nil
+        membership = nil
+        errorMessage = message
+        authState = .unauthenticated
+    }
+
     private func loadUserData(userId: String) async {
         do {
             errorMessage = nil
@@ -284,7 +298,13 @@ class AppViewModel {
             }
         } catch {
             print("Load user data error: \(error)")
-            authState = .unauthenticated
+            if service.shouldClearLocalSession(for: error) {
+                await resetToUnauthenticated(message: "Your session is no longer valid. Please sign in again.")
+            } else {
+                currentUser = nil
+                membership = nil
+                authState = .unauthenticated
+            }
         }
     }
 }

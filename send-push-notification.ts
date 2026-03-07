@@ -14,11 +14,13 @@ SgPy5Wxu
 
 type APNSResult = {
   token: string
+  rawToken: string
   endpoint: "production" | "sandbox" | "request"
   status: number
   success: boolean
   body?: string
   error?: string
+  reason?: string
 }
 
 const ALLOWED_ORIGINS = new Set([
@@ -102,6 +104,17 @@ function shortToken(token: string): string {
   return `${token.slice(0, 8)}...`
 }
 
+function parseAPNSReason(rawBody: string): string | undefined {
+  if (!rawBody) return undefined
+
+  try {
+    const parsed = JSON.parse(rawBody)
+    return typeof parsed?.reason === "string" ? parsed.reason : undefined
+  } catch {
+    return undefined
+  }
+}
+
 async function sendPush(token: string, title: string, body: string, jwt: string): Promise<APNSResult> {
   const payload = {
     aps: {
@@ -144,6 +157,7 @@ async function sendPush(token: string, title: string, body: string, jwt: string)
       console.log(`[APNS] token=${tokenPreview} environment=production status=${production.status}`)
       return {
         token: tokenPreview,
+        rawToken: token,
         endpoint: "production",
         status: production.status,
         success: true,
@@ -151,20 +165,23 @@ async function sendPush(token: string, title: string, body: string, jwt: string)
       }
     }
 
+    const productionReason = parseAPNSReason(production.body)
     const errorMessage = `Production ${production.status} ${production.body}`
     console.error(`[APNS] token=${tokenPreview} environment=production status=${production.status} body=${production.body}`)
 
     if (
-      (production.status === 400 && production.body.includes("BadDeviceToken")) ||
-      (production.status === 403 && production.body.includes("BadEnvironmentKeyInToken"))
+      (production.status === 400 && productionReason === "BadDeviceToken") ||
+      (production.status === 403 && productionReason === "BadEnvironmentKeyInToken")
     ) {
       console.log(`[APNS] token=${tokenPreview} switching to sandbox environment`)
       const sandbox = await postPush("sandbox")
+      const sandboxReason = parseAPNSReason(sandbox.body)
 
       if (sandbox.ok) {
         console.log(`[APNS] token=${tokenPreview} environment=sandbox status=${sandbox.status}`)
         return {
           token: tokenPreview,
+          rawToken: token,
           endpoint: "sandbox",
           status: sandbox.status,
           success: true,
@@ -175,24 +192,29 @@ async function sendPush(token: string, title: string, body: string, jwt: string)
       console.error(`[APNS] token=${tokenPreview} environment=sandbox status=${sandbox.status} body=${sandbox.body}`)
       return {
         token: tokenPreview,
+        rawToken: token,
         endpoint: "sandbox",
         status: sandbox.status,
         success: false,
-        error: `Sandbox ${sandbox.status} ${sandbox.body}`
+        error: `Sandbox ${sandbox.status} ${sandbox.body}`,
+        reason: sandboxReason
       }
     }
 
     return {
       token: tokenPreview,
+      rawToken: token,
       endpoint: "production",
       status: production.status,
       success: false,
-      error: errorMessage
+      error: errorMessage,
+      reason: productionReason
     }
   } catch (e) {
     console.error(`[APNS] token=${tokenPreview} request error:`, e)
     return {
       token: tokenPreview,
+      rawToken: token,
       endpoint: "request",
       status: 0,
       success: false,
@@ -240,11 +262,32 @@ Deno.serve(async (req: Request) => {
       tokens.map((t: { token: string }) => sendPush(t.token, title, body, jwt))
     );
 
+    const invalidReasons = new Set(["BadDeviceToken", "Unregistered", "DeviceTokenNotForTopic"]);
+    const invalidTokens = results
+      .filter((result) => !result.success && result.reason && invalidReasons.has(result.reason))
+      .map((result) => result.rawToken);
+
+    if (invalidTokens.length > 0) {
+      const { error: cleanupError } = await supabase
+        .from("device_tokens")
+        .delete()
+        .eq("user_id", userId)
+        .eq("platform", "ios")
+        .in("token", invalidTokens);
+
+      if (cleanupError) {
+        console.error(`[send-push-notification] failed to prune invalid tokens: ${cleanupError.message}`);
+      } else {
+        console.log(`[send-push-notification] pruned ${invalidTokens.length} invalid APNs token(s) for user=${userId}`);
+      }
+    }
+
     const sent = results.filter((r) => r.success).length;
+    const publicResults = results.map(({ rawToken: _rawToken, ...result }) => result);
     console.log(`[send-push-notification] user=${userId} title="${title}" sent=${sent}/${results.length}`)
-    console.log(`[send-push-notification] apns results: ${JSON.stringify(results)}`)
+    console.log(`[send-push-notification] apns results: ${JSON.stringify(publicResults)}`)
     return jsonResponse(
-      { message: `Sent ${sent}/${tokens.length} pushes`, results },
+      { message: `Sent ${sent}/${tokens.length} pushes`, results: publicResults },
       { status: 200 },
       origin,
     );
